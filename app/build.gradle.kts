@@ -2,6 +2,10 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlin.ksp)
 }
 
 android {
@@ -20,11 +24,13 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -56,4 +62,75 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+
+    // Fix Error FLAG_IMMUTABLE or FLAG_MUTABLE
+    implementation(libs.androidx.work.runtime.ktx)
+
+    // Compose
+    implementation(libs.androidx.compose.bom.v20250101)
+    implementation(libs.androidx.animation)
+
+    // Navigation
+    implementation(libs.androidx.navigation.compose)
+
+    // Room
+    implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.runtime)
+    androidTestImplementation(project(":app"))
+    implementation(libs.androidx.room.paging)
+
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.android)
+
+    // Lifecycle ViewModel
+    implementation(libs.androidx.lifecycle.viewmodel.ktx)
+
+    // Coil
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+
+    // Serialization
+    implementation(libs.kotlinx.serialization.json)
+
+    // Hilt
+    implementation(libs.hilt.android)
+    implementation(libs.hilt.navigation.compose)
+    implementation(libs.androidx.ui.text.google.fonts)
+    ksp(libs.hilt.compiler)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.hilt.work)
+
+    // Retrofit
+    implementation(libs.bundles.retrofit)
+
+    // Local tests
+    testImplementation(libs.junit)
+    testImplementation(libs.truth)
+    testImplementation(libs.androidx.core)
+    testImplementation(libs.androidx.core.testing)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockwebserver)
+    testImplementation(libs.mockk)
+    debugImplementation(libs.ui.test.manifest)
+
+    //  Instrumentation Tests
+    androidTestImplementation(libs.androidx.junit)
+    androidTestImplementation(libs.ui.test.junit4)
+    androidTestImplementation(libs.core.ktx)
+    androidTestImplementation(libs.androidx.core.testing)
+    androidTestImplementation(libs.androidx.runner)
+    androidTestImplementation(libs.kotlinx.coroutines.test)
+    androidTestImplementation(libs.truth)
+    androidTestImplementation(libs.androidx.espresso.core)
+    androidTestImplementation(libs.mockwebserver)
+    androidTestImplementation(libs.mockk.android)
+    androidTestImplementation(libs.hilt.android.testing)
+    //kaptAndroidTest("com.google.dagger:hilt-android-compiler:2.51.1")
+    androidTestImplementation(libs.androidx.compose.bom.v20250101)
+
+    // Status Bar
+    implementation(libs.accompanist.systemuicontroller)
+
+    // Paging compose
+    implementation(libs.paging.compose)
 }

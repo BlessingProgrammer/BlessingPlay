@@ -1,4 +1,4 @@
-package com.blessingsoftware.blessingplay.ui.theme
+package com.blessingsoftware.blessingplay.core.presentation.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

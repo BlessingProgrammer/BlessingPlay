@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">Blessing Play</string>
+    <string name="db_name">song_db.db</string>
+    <string name="library_screen">Library</string>
+    <string name="playlist_screen">Play List</string>
+    <string name="setting_screen">Setting</string>
 </resources>
