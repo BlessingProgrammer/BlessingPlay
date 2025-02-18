@@ -19,3 +19,29 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+-keep class kotlin.Metadata { *; }
+-keep class kotlin.jvm.internal.** { *; }
+
+-keep class kotlinx.coroutines.** { *; }
+
+-keepclassmembers class * {
+    @kotlin.Metadata *;
+}
+
+-keep class * extends androidx.lifecycle.ViewModel { *; }
+
+-keep class kotlinx.coroutines.flow.** { *; }
+
+-keepattributes *Annotation*
+-keep class dagger.hilt.** { *; }
+-keep class javax.inject.** { *; }
+
+-keep class com.example.model.** { *; }
+
+-keepattributes *Annotation*
+-keep class com.google.gson.annotations.** { *; }
+
+-keep interface com.example.api.** { *; }
+
+-assumenosideeffects class android.util.Log { *; }
