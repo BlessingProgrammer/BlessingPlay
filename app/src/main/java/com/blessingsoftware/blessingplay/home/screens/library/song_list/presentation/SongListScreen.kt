@@ -1,9 +1,9 @@
 package com.blessingsoftware.blessingplay.home.screens.library.song_list.presentation
 
 import android.widget.Toast
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,26 +18,40 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,6 +61,7 @@ import com.blessingsoftware.blessingplay.R
 import com.blessingsoftware.blessingplay.core.domain.model.Song
 import com.blessingsoftware.blessingplay.home.presentation.component.ActionIcon
 import com.blessingsoftware.blessingplay.home.presentation.component.SwipeAbleItemWithActions
+import kotlinx.coroutines.launch
 
 @ExperimentalMaterial3Api
 @Composable
@@ -56,101 +71,124 @@ fun SongListScreen(
     val context = LocalContext.current
 
     val songListState by songListViewModel.songListState.collectAsState()
-
     val revealedItemId by songListViewModel.revealedItemId.collectAsState()
-
     val isLoading by songListViewModel.isLoading.collectAsState()
+    val searchQuery by songListViewModel.searchQuery.collectAsState()
+    val targetIndex = songListViewModel.calculateScrollTargetIndex()
 
     val listState = rememberLazyListState()
-
     val refreshState = rememberPullToRefreshState()
 
-    PullToRefreshBox(
-        state = refreshState,
-        isRefreshing = isLoading,
-        onRefresh = {
-            songListViewModel.pullToRefresh()
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(searchQuery) {
+        if (searchQuery.isBlank()) {
+            if (listState.firstVisibleItemIndex != 0) {
+                listState.scrollToItem(0)
+            }
         }
-    ) {
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize()
+    }
+
+    Scaffold(
+        topBar = {
+            UnderlinedSearchTextField(
+                value = searchQuery,
+                onValueChange = { songListViewModel.setSearchQuery(it) },
+                placeholder = "Search songs...",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                onImeAction = {
+                    coroutineScope.launch {
+                        listState.animateScrollToItem(index = targetIndex, scrollOffset = 0)
+                    }
+                },
+                onClear = { songListViewModel.setSearchQuery("") }
+            )
+        }
+    ) { paddingValues ->
+        PullToRefreshBox(
+            state = refreshState,
+            isRefreshing = isLoading,
+            onRefresh = {
+                songListViewModel.pullToRefresh()
+            }
         ) {
-            songListState.forEach { (header, songs) ->
-                item {
-                    Text(
-                        text = header.toString(),
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.Transparent)
-                            .padding(start = 10.dp)
-                            .padding(top = 7.dp)
-                            .padding(bottom = 3.dp)
-                    )
-                }
-
-                itemsIndexed(
-                    items = songs,
-                    key = { _, song -> song.id }
-                ) { _, song ->
-                    SwipeAbleItemWithActions(
-                        isRevealed = revealedItemId == song.id.toString(),
-                        onExpanded = { songListViewModel.setRevealedItemId(song.id.toString()) },
-                        onCollapsed = {
-                            if (revealedItemId == song.id.toString()) {
-                                songListViewModel.setRevealedItemId(null)
-                            }
-                        },
-                        actions = {
-                            ActionIcon(
-                                onClick = {
-                                    songListViewModel.deleteSong(song)
-                                    songListViewModel.setRevealedItemId(null)
-                                    Toast.makeText(
-                                        context, "${song.title} deleted ",
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                },
-                                backgroundColor = Color.Red,
-                                icon = Icons.Default.Delete,
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .width(60.dp)
-                            )
-
-                            ActionIcon(
-                                onClick = {
-                                    songListViewModel.setRevealedItemId(null)
-                                },
-                                backgroundColor = Color.Magenta,
-                                icon = Icons.Default.Edit,
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .width(60.dp)
-                            )
-
-                            ActionIcon(
-                                onClick = {
-                                    songListViewModel.setRevealedItemId(null)
-                                },
-                                backgroundColor = Color.LightGray,
-                                icon = Icons.Default.MoreVert,
-                                modifier = Modifier
-                                    .fillMaxHeight()
-                                    .width(60.dp)
-                            )
-                        }
-                    ) {
-                        ListSongItem(
-                            song = song,
-                            onClick = {
-                                if (revealedItemId !== null) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+            ) {
+                songListState.forEach { (header, songs) ->
+                    item {
+                        Text(
+                            text = header.toString(),
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 10.dp, top = 7.dp, bottom = 3.dp)
+                        )
+                    }
+                    itemsIndexed(
+                        items = songs,
+                        key = { _, song -> song.id }
+                    ) { _, song ->
+                        SwipeAbleItemWithActions(
+                            isRevealed = revealedItemId == song.id.toString(),
+                            onExpanded = { songListViewModel.setRevealedItemId(song.id.toString()) },
+                            onCollapsed = {
+                                if (revealedItemId == song.id.toString()) {
                                     songListViewModel.setRevealedItemId(null)
                                 }
+                            },
+                            actions = {
+                                ActionIcon(
+                                    onClick = {
+                                        songListViewModel.deleteSong(song)
+                                        songListViewModel.setRevealedItemId(null)
+                                        Toast.makeText(
+                                            context, "${song.title} deleted", Toast.LENGTH_SHORT
+                                        ).show()
+                                    },
+                                    backgroundColor = Color.Red,
+                                    icon = Icons.Default.Delete,
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .width(60.dp)
+                                )
+                                ActionIcon(
+                                    onClick = {
+                                        songListViewModel.setRevealedItemId(null)
+                                    },
+                                    backgroundColor = Color.Magenta,
+                                    icon = Icons.Default.Edit,
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .width(60.dp)
+                                )
+                                ActionIcon(
+                                    onClick = {
+                                        songListViewModel.setRevealedItemId(null)
+                                    },
+                                    backgroundColor = Color.LightGray,
+                                    icon = Icons.Default.MoreVert,
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .width(60.dp)
+                                )
                             }
-                        )
+                        ) {
+                            ListSongItem(
+                                song = song,
+                                onClick = {
+                                    if (revealedItemId != null) {
+                                        songListViewModel.setRevealedItemId(null)
+                                    }
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -219,6 +257,72 @@ fun ListSongItem(
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+fun UnderlinedSearchTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    placeholder: String,
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = LocalTextStyle.current.copy(color = Color.White),
+    onImeAction: () -> Unit = {},
+    onClear: () -> Unit = {}
+) {
+    Box(
+        modifier = modifier
+            .drawBehind {
+                drawLine(
+                    color = Color.LightGray,
+                    start = Offset(0f, size.height),
+                    end = Offset(size.width, size.height),
+                    strokeWidth = 1.dp.toPx()
+                )
+            }
+            .padding(horizontal = 3.dp)
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = true,
+            textStyle = textStyle,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(
+                onSearch = { onImeAction() }
+            ),
+            cursorBrush = SolidColor(Color.White),
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.CenterStart)
+                .padding(horizontal = 2.dp)
+                .padding(bottom = 8.dp),
+            decorationBox = { innerTextField ->
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    if (value.isEmpty()) {
+                        Text(
+                            text = placeholder,
+                            style = textStyle.copy(
+                                color = Color.LightGray,
+                                fontStyle = FontStyle.Italic
+                            ),
+                        )
+                    }
+                    innerTextField()
+                }
+            }
+        )
+
+        if (value.isNotBlank()) IconButton(
+            onClick = { onClear() },
+            modifier = Modifier.align(Alignment.CenterEnd)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Clear,
+                contentDescription = "Clear",
+                tint = Color.White
             )
         }
     }

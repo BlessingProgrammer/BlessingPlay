@@ -31,9 +31,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.blessingsoftware.blessingplay.core.presentation.ui.theme.BlessingPlayTheme
 import com.blessingsoftware.blessingplay.home.presentation.HomeScreen
-import com.blessingsoftware.blessingplay.home.screens.library.song_list.presentation.SongListScreen
-import com.blessingsoftware.blessingplay.home.screens.play_list.presentation.PlayListScreen
-import com.blessingsoftware.blessingplay.home.screens.setting.presentation.SettingScreen
 import com.blessingsoftware.blessingplay.splash.presentation.SplashScreen
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
@@ -71,7 +68,12 @@ class MainActivity : ComponentActivity() {
         ) {
             composable<Screen.Splash> {
                 SplashScreen(
-                    onNavigateToHome = { navController.navigate(Screen.Home) }
+                    onNavigateToHome = {
+                        navController.navigate(Screen.Home) {
+                            popUpTo(Screen.Splash) { inclusive = true }
+                            launchSingleTop = true
+                        }
+                    }
                 )
             }
 
