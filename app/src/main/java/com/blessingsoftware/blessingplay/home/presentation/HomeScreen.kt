@@ -50,8 +50,8 @@ fun HomeScreen(navController: NavController) {
             unselectedIcon = Icons.Outlined.Menu
         ),
         BottomNavItem(
-            title = "Play List",
-            route = "play_list",
+            title = "Playlist",
+            route = "playlist",
             selectedIcon = Icons.Filled.PlayArrow,
             unselectedIcon = Icons.Outlined.PlayArrow
         ),
@@ -76,7 +76,7 @@ fun HomeScreen(navController: NavController) {
             composable("library") {
                 SongListScreen()
             }
-            composable("play_list") {
+            composable("playlist") {
                 PlayListScreen()
             }
             composable("setting") {

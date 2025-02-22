@@ -1,5 +1,6 @@
 package com.blessingsoftware.blessingplay.home.screens.library.song_list.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,7 +25,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -75,8 +80,10 @@ fun SongListScreen(
     val revealedItemId by songListViewModel.revealedItemId.collectAsState()
     val isLoading by songListViewModel.isLoading.collectAsState()
     val searchQuery by songListViewModel.searchQuery.collectAsState()
-    val queryIndex = songListViewModel.calculateScrollTargetIndex()
+    val queryIndexes = songListViewModel.calculateScrollTargetIndex()
     val updateIndex by songListViewModel.updateIndex.collectAsState()
+
+    val currentQueryIndex = remember { mutableIntStateOf(-1) }
 
     val listState = rememberLazyListState()
     val refreshState = rememberPullToRefreshState()
@@ -88,6 +95,8 @@ fun SongListScreen(
     val updateArtist = remember { mutableStateOf("") }
 
     val songStateForDelete by songListViewModel.songStateForDelete.collectAsState()
+
+    val extendDialogVisible = remember { mutableStateOf(false) }
 
     LaunchedEffect(songStateForUpdate) {
         updateTitle.value = songStateForUpdate?.title ?: ""
@@ -117,10 +126,53 @@ fun SongListScreen(
                     .padding(vertical = 8.dp),
                 onImeAction = {
                     coroutineScope.launch {
-                        listState.animateScrollToItem(index = queryIndex, scrollOffset = 0)
+                        listState.animateScrollToItem(
+                            index = queryIndexes.first()
+                        )
+                        currentQueryIndex.value = 0
                     }
                 },
-                onClear = { songListViewModel.setSearchQuery("") }
+                onUp = {
+                    coroutineScope.launch {
+                        if (queryIndexes.isNotEmpty()) {
+                            val prevIndex = if (currentQueryIndex.value > 0) {
+                                currentQueryIndex.value - 1
+                            } else {
+                                queryIndexes.size - 1
+                            }
+
+                            currentQueryIndex.value = prevIndex
+
+                            listState.animateScrollToItem(
+                                index = queryIndexes[prevIndex]
+                            )
+                        }
+                    }
+                },
+                onDown = {
+                    coroutineScope.launch {
+                        if (queryIndexes.isNotEmpty()) {
+                            val nextIndex = if (currentQueryIndex.value < queryIndexes.size - 1) {
+                                currentQueryIndex.value + 1
+                            } else {
+                                0
+                            }
+
+                            currentQueryIndex.value = nextIndex
+
+                            listState.animateScrollToItem(
+                                index = queryIndexes[nextIndex],
+                                scrollOffset = 0
+                            )
+                        }
+                    }
+                },
+                onClear = {
+                    songListViewModel.setSearchQuery("")
+                    currentQueryIndex.value = -1
+                },
+                result = queryIndexes.size,
+                currentIndex = currentQueryIndex.value + 1
             )
         }
     ) { paddingValues ->
@@ -183,7 +235,7 @@ fun SongListScreen(
                                 )
                                 ActionIcon(
                                     onClick = {
-                                        songListViewModel.setRevealedItemId(null)
+                                        extendDialogVisible.value = true
                                     },
                                     backgroundColor = Color.LightGray,
                                     icon = Icons.Default.MoreVert,
@@ -207,6 +259,7 @@ fun SongListScreen(
             }
 
             HomeDialog(
+                isMultiButton = true,
                 onVisible = songStateForUpdate !== null,
                 onSubmit = {
                     songStateForUpdate?.let {
@@ -225,13 +278,14 @@ fun SongListScreen(
                 buttonBackgroundColor = Color.Blue,
                 buttonTextColor = Color.White
             ) {
-                SongUpdate(
+                SongUpdateDialog(
                     updateTitle = updateTitle,
                     updateArtist = updateArtist
                 )
             }
 
             HomeDialog(
+                isMultiButton = true,
                 onVisible = songStateForDelete !== null,
                 onSubmit = {
                     songStateForDelete?.let {
@@ -248,16 +302,28 @@ fun SongListScreen(
                 buttonBackgroundColor = Color.Red,
                 buttonTextColor = Color.White
             ) {
-                SongDelete(
+                SongDeleteDialog(
                     deleteTitle = songStateForDelete?.title ?: ""
                 )
+            }
+
+            HomeDialog(
+                isMultiButton = false,
+                onVisible = extendDialogVisible.value,
+                onSubmit = {},
+                onDismiss = {
+                    extendDialogVisible.value = false
+                    songListViewModel.setRevealedItemId(null)
+                }
+            ) {
+                SongExtendDialog()
             }
         }
     }
 }
 
 @Composable
-fun ListSongItem(
+private fun ListSongItem(
     song: Song,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -323,80 +389,149 @@ fun ListSongItem(
 }
 
 @Composable
-fun UnderlinedSearchTextField(
+private fun UnderlinedSearchTextField(
     value: String,
     onValueChange: (String) -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
     textStyle: TextStyle = LocalTextStyle.current.copy(color = Color.White),
     onImeAction: () -> Unit = {},
-    onClear: () -> Unit = {}
+    onUp: () -> Unit = {},
+    onDown: () -> Unit = {},
+    onClear: () -> Unit = {},
+    result: Int = 0,
+    currentIndex: Int = 1
 ) {
-    Box(
-        modifier = modifier
-            .drawBehind {
-                drawLine(
-                    color = Color.LightGray,
-                    start = Offset(0f, size.height),
-                    end = Offset(size.width, size.height),
-                    strokeWidth = 1.dp.toPx()
-                )
-            }
-            .padding(horizontal = 3.dp)
+    Column(
+        modifier = Modifier.fillMaxWidth()
     ) {
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = true,
-            textStyle = textStyle,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(
-                onSearch = { onImeAction() }
-            ),
-            cursorBrush = SolidColor(Color.White),
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.CenterStart)
-                .padding(horizontal = 2.dp)
-                .padding(bottom = 8.dp),
-            decorationBox = { innerTextField ->
-                Box(modifier = Modifier.fillMaxWidth()) {
-                    if (value.isEmpty()) {
-                        Text(
-                            text = placeholder,
-                            style = textStyle.copy(
-                                color = Color.LightGray,
-                                fontStyle = FontStyle.Italic
-                            ),
-                        )
+        Box(
+            modifier = modifier
+                .drawBehind {
+                    drawLine(
+                        color = Color.LightGray,
+                        start = Offset(0f, size.height),
+                        end = Offset(size.width, size.height),
+                        strokeWidth = 1.dp.toPx()
+                    )
+                }
+                .padding(horizontal = 3.dp)
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = textStyle,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(
+                    onSearch = { onImeAction() }
+                ),
+                cursorBrush = SolidColor(Color.White),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.CenterStart)
+                    .padding(horizontal = 2.dp)
+                    .padding(bottom = 10.dp),
+                decorationBox = { innerTextField ->
+                    Box(modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.CenterStart)) {
+                        if (value.isEmpty()) {
+                            Text(
+                                text = placeholder,
+                                style = textStyle.copy(
+                                    color = Color.LightGray,
+                                    fontStyle = FontStyle.Italic
+                                ),
+                            )
+                        }
+                        innerTextField()
                     }
-                    innerTextField()
+                }
+            )
+
+            if (value.isNotBlank()) {
+                IconButton(
+                    onClick = { onClear() },
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        modifier = Modifier.size(25.dp),
+                        contentDescription = "Clear",
+                        tint = Color.White
+                    )
                 }
             }
-        )
+        }
+        if (result > 0) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "Result: $currentIndex/$result", color = Color.White)
 
-        if (value.isNotBlank()) IconButton(
-            onClick = { onClear() },
-            modifier = Modifier.align(Alignment.CenterEnd)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Clear,
-                contentDescription = "Clear",
-                tint = Color.White
-            )
+                Row(
+                    horizontalArrangement = Arrangement.Start,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = { onDown() },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            modifier = Modifier.size(60.dp),
+                            contentDescription = "Down",
+                            tint = Color.White
+                        )
+                    }
+
+                    IconButton(
+                        onClick = { onUp() }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowUp,
+                            modifier = Modifier.size(60.dp),
+                            contentDescription = "Up",
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun SongUpdate(
+private fun SongDeleteDialog(
+    deleteTitle: String,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Text(
+            text = deleteTitle,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 10.dp)
+        )
+        Text(
+            text = "Once deleted, it cannot be restored. Confirm?",
+            fontSize = 15.sp,
+        )
+    }
+}
+
+@Composable
+private fun SongUpdateDialog(
     updateTitle: MutableState<String>,
     updateArtist: MutableState<String>,
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(250.dp)
             .padding(16.dp)
     ) {
         Text(
@@ -423,23 +558,57 @@ fun SongUpdate(
 }
 
 @Composable
-fun SongDelete(
-    deleteTitle: String,
+private fun SongExtendDialog(
+
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp)
             .padding(16.dp)
     ) {
-        Text(
-            text = deleteTitle,
-            fontSize = 16.sp,
-            modifier = Modifier.padding(bottom = 10.dp)
-        )
-        Text(
-            text = "Once deleted, it cannot be restored. Confirm?",
-            fontSize = 15.sp,
-        )
+        Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Transparent),
+            onClick = { /*TODO*/ }
+        ) {
+            Text(text = "Play")
+        }
+        Spacer(modifier = Modifier.height(5.dp))
+        Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Transparent),
+            onClick = { /*TODO*/ }
+        ) {
+            Text(text = "Next play")
+        }
+        Spacer(modifier = Modifier.height(5.dp))
+        Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Transparent),
+            onClick = { /*TODO*/ }
+        ) {
+            Text(text = "Detail")
+        }
+        Spacer(modifier = Modifier.height(5.dp))
+        Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Transparent),
+            onClick = { /*TODO*/ }
+        ) {
+            Text(text = "Add to playlist")
+        }
+        Spacer(modifier = Modifier.height(5.dp))
+        Button(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Transparent),
+            onClick = { /*TODO*/ }
+        ) {
+            Text(text = "Add to waiting list")
+        }
     }
 }

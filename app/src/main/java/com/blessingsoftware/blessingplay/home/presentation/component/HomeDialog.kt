@@ -2,6 +2,7 @@ package com.blessingsoftware.blessingplay.home.presentation.component
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,9 +19,10 @@ import androidx.compose.ui.window.Dialog
 
 @Composable
 fun HomeDialog(
-    title: String,
-    buttonBackgroundColor: Color,
-    buttonTextColor: Color,
+    isMultiButton: Boolean = false,
+    title: String? = null,
+    buttonBackgroundColor: Color? = null,
+    buttonTextColor: Color? = null,
     modifier: Modifier = Modifier,
     onVisible: Boolean,
     onSubmit: () -> Unit,
@@ -35,11 +37,12 @@ fun HomeDialog(
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 8.dp
             ) {
-                Box {
+                Column(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     content()
                     Row(
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
                             .fillMaxWidth()
                     ) {
                         HomeDialogButton(
@@ -50,14 +53,16 @@ fun HomeDialog(
                             textColor = Color.White,
                             onClick = onDismiss
                         )
-                        HomeDialogButton(
-                            title = title,
-                            modifier = Modifier
-                                .weight(1f)
-                                .background(buttonBackgroundColor),
-                            textColor = buttonTextColor,
-                            onClick = onSubmit
-                        )
+                        if (isMultiButton) {
+                            HomeDialogButton(
+                                title = title ?: "OK",
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .background(buttonBackgroundColor ?: Color.Blue),
+                                textColor = buttonTextColor ?: Color.White,
+                                onClick = onSubmit
+                            )
+                        }
                     }
                 }
             }
