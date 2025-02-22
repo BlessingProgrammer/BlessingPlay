@@ -1,6 +1,5 @@
 package com.blessingsoftware.blessingplay.home.screens.library.song_list.presentation
 
-import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,8 +35,11 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,7 +49,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -60,6 +61,8 @@ import coil3.compose.AsyncImage
 import com.blessingsoftware.blessingplay.R
 import com.blessingsoftware.blessingplay.core.domain.model.Song
 import com.blessingsoftware.blessingplay.home.presentation.component.ActionIcon
+import com.blessingsoftware.blessingplay.home.presentation.component.HomeDialog
+import com.blessingsoftware.blessingplay.home.presentation.component.OutlinedTextFiled
 import com.blessingsoftware.blessingplay.home.presentation.component.SwipeAbleItemWithActions
 import kotlinx.coroutines.launch
 
@@ -68,18 +71,32 @@ import kotlinx.coroutines.launch
 fun SongListScreen(
     songListViewModel: SongListViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
-
     val songListState by songListViewModel.songListState.collectAsState()
     val revealedItemId by songListViewModel.revealedItemId.collectAsState()
     val isLoading by songListViewModel.isLoading.collectAsState()
     val searchQuery by songListViewModel.searchQuery.collectAsState()
-    val targetIndex = songListViewModel.calculateScrollTargetIndex()
+    val queryIndex = songListViewModel.calculateScrollTargetIndex()
+    val updateIndex by songListViewModel.updateIndex.collectAsState()
 
     val listState = rememberLazyListState()
     val refreshState = rememberPullToRefreshState()
 
     val coroutineScope = rememberCoroutineScope()
+
+    val songStateForUpdate by songListViewModel.songStateForUpdate.collectAsState()
+    val updateTitle = remember { mutableStateOf("") }
+    val updateArtist = remember { mutableStateOf("") }
+
+    val songStateForDelete by songListViewModel.songStateForDelete.collectAsState()
+
+    LaunchedEffect(songStateForUpdate) {
+        updateTitle.value = songStateForUpdate?.title ?: ""
+        updateArtist.value = songStateForUpdate?.artist ?: ""
+    }
+
+    LaunchedEffect(updateIndex) {
+        updateIndex?.let { listState.animateScrollToItem(index = it, scrollOffset = 0) }
+    }
 
     LaunchedEffect(searchQuery) {
         if (searchQuery.isBlank()) {
@@ -100,7 +117,7 @@ fun SongListScreen(
                     .padding(vertical = 8.dp),
                 onImeAction = {
                     coroutineScope.launch {
-                        listState.animateScrollToItem(index = targetIndex, scrollOffset = 0)
+                        listState.animateScrollToItem(index = queryIndex, scrollOffset = 0)
                     }
                 },
                 onClear = { songListViewModel.setSearchQuery("") }
@@ -146,11 +163,7 @@ fun SongListScreen(
                             actions = {
                                 ActionIcon(
                                     onClick = {
-                                        songListViewModel.deleteSong(song)
-                                        songListViewModel.setRevealedItemId(null)
-                                        Toast.makeText(
-                                            context, "${song.title} deleted", Toast.LENGTH_SHORT
-                                        ).show()
+                                        songListViewModel.setSongStateForDelete(song)
                                     },
                                     backgroundColor = Color.Red,
                                     icon = Icons.Default.Delete,
@@ -160,7 +173,7 @@ fun SongListScreen(
                                 )
                                 ActionIcon(
                                     onClick = {
-                                        songListViewModel.setRevealedItemId(null)
+                                        songListViewModel.setSongStateForUpdate(song)
                                     },
                                     backgroundColor = Color.Magenta,
                                     icon = Icons.Default.Edit,
@@ -191,6 +204,53 @@ fun SongListScreen(
                         }
                     }
                 }
+            }
+
+            HomeDialog(
+                onVisible = songStateForUpdate !== null,
+                onSubmit = {
+                    songStateForUpdate?.let {
+                        songListViewModel.updateSong(
+                            song = it,
+                            updateTitle = updateTitle.value,
+                            updateArtist = updateArtist.value
+                        )
+                    }
+                },
+                onDismiss = {
+                    songListViewModel.setSongStateForUpdate(null)
+                    songListViewModel.setRevealedItemId(null)
+                },
+                title = "Update",
+                buttonBackgroundColor = Color.Blue,
+                buttonTextColor = Color.White
+            ) {
+                SongUpdate(
+                    updateTitle = updateTitle,
+                    updateArtist = updateArtist
+                )
+            }
+
+            HomeDialog(
+                onVisible = songStateForDelete !== null,
+                onSubmit = {
+                    songStateForDelete?.let {
+                        songListViewModel.deleteSong(
+                            song = it
+                        )
+                    }
+                },
+                onDismiss = {
+                    songListViewModel.setSongStateForDelete(null)
+                    songListViewModel.setRevealedItemId(null)
+                },
+                title = "Delete",
+                buttonBackgroundColor = Color.Red,
+                buttonTextColor = Color.White
+            ) {
+                SongDelete(
+                    deleteTitle = songStateForDelete?.title ?: ""
+                )
             }
         }
     }
@@ -325,5 +385,61 @@ fun UnderlinedSearchTextField(
                 tint = Color.White
             )
         }
+    }
+}
+
+@Composable
+fun SongUpdate(
+    updateTitle: MutableState<String>,
+    updateArtist: MutableState<String>,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(250.dp)
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Title:",
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
+        OutlinedTextFiled(
+            value = updateTitle.value,
+            onValueChange = { updateTitle.value = it }
+        )
+        Text(
+            text = "Artist:",
+            fontSize = 16.sp,
+            modifier = Modifier
+                .padding(top = 15.dp)
+                .padding(bottom = 8.dp)
+        )
+        OutlinedTextFiled(
+            value = updateArtist.value,
+            onValueChange = { updateArtist.value = it }
+        )
+    }
+}
+
+@Composable
+fun SongDelete(
+    deleteTitle: String,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp)
+            .padding(16.dp)
+    ) {
+        Text(
+            text = deleteTitle,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 10.dp)
+        )
+        Text(
+            text = "Once deleted, it cannot be restored. Confirm?",
+            fontSize = 15.sp,
+        )
     }
 }

@@ -9,7 +9,9 @@ import com.blessingsoftware.blessingplay.core.data.repository.SongRepositoryImpl
 import com.blessingsoftware.blessingplay.core.domain.repository.SongRepository
 import com.blessingsoftware.blessingplay.home.screens.library.song_list.domain.use_case.DeleteSong
 import com.blessingsoftware.blessingplay.home.screens.library.song_list.domain.use_case.GetAllSongs
-import com.blessingsoftware.blessingplay.splash.domain.use_case.LoadMediaFileAndSaveToMemory
+import com.blessingsoftware.blessingplay.home.screens.library.song_list.domain.use_case.InsertSongs
+import com.blessingsoftware.blessingplay.home.screens.library.song_list.domain.use_case.UpdateSong
+import com.blessingsoftware.blessingplay.splash.domain.use_case.LoadMediaFileAndSaveToDb
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -27,24 +29,25 @@ object AppModule {
         return Room.databaseBuilder(
             application,
             SongDb::class.java,
-            application.getString( R.string.db_name)
+            application.getString(R.string.db_name)
         ).build()
     }
 
     @Provides
     @Singleton
     fun provideSongRepository(
-        @ApplicationContext context: Context
+        @ApplicationContext context: Context,
+        songDb: SongDb
     ): SongRepository {
-        return SongRepositoryImpl(context)
+        return SongRepositoryImpl(context, songDb)
     }
 
     @Provides
     @Singleton
     fun provideLoadMediaFileAndSaveToDbUseCase(
         songRepository: SongRepository
-    ): LoadMediaFileAndSaveToMemory {
-        return LoadMediaFileAndSaveToMemory(songRepository)
+    ): LoadMediaFileAndSaveToDb {
+        return LoadMediaFileAndSaveToDb(songRepository)
     }
 
     @Provides
@@ -53,6 +56,22 @@ object AppModule {
         songRepository: SongRepository
     ): GetAllSongs {
         return GetAllSongs(songRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideInsertSongsUseCase(
+        songRepository: SongRepository
+    ): InsertSongs {
+        return InsertSongs(songRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUpdateSongUseCase(
+        songRepository: SongRepository
+    ): UpdateSong {
+        return UpdateSong(songRepository)
     }
 
     @Provides

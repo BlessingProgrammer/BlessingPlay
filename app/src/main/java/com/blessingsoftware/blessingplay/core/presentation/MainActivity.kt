@@ -1,13 +1,19 @@
 package com.blessingsoftware.blessingplay.core.presentation
 
 import android.Manifest
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.os.Bundle
+import android.os.Environment
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.WindowInsets
@@ -38,15 +44,15 @@ import dagger.hilt.android.AndroidEntryPoint
 @ExperimentalMaterial3Api
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             BlessingPlayTheme {
                 SetStatusBarColor()
-
-                PermissionHandler { isGranted ->
-                    if (isGranted) {
+                PermissionHandler { isPermissionGranted ->
+                    if (isPermissionGranted) {
                         Navigation()
                     }
                 }
@@ -124,3 +130,8 @@ private fun PermissionHandler(onPermissionResult: @Composable (Boolean) -> Unit)
         onPermissionResult(true)
     }
 }
+
+
+
+
+

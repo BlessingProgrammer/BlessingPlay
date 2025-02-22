@@ -5,7 +5,9 @@ import androidx.room.PrimaryKey
 
 @Entity
 class SongEntity(
-    val numericalOrder: Long,
+    @PrimaryKey(autoGenerate = true)
+    val id: Long? = null,
+
     val fileId: Long,
     var title: String,
     val fileName: String,
@@ -17,8 +19,5 @@ class SongEntity(
     val mimeType: String,
     val size: Long,
     val duration: Long,
-    val dateModified: Long,
-
-    @PrimaryKey(autoGenerate = true)
-    val id: Int? = null
+    val dateModified: Long
 )
