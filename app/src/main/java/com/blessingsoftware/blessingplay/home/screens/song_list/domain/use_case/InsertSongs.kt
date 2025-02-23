@@ -1,4 +1,4 @@
-package com.blessingsoftware.blessingplay.home.screens.library.song_list.domain.use_case
+package com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case
 
 import com.blessingsoftware.blessingplay.core.domain.repository.SongRepository
 

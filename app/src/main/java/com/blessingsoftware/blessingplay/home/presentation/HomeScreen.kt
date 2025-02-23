@@ -15,25 +15,21 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SearchBar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.blessingsoftware.blessingplay.home.screens.library.song_list.presentation.SongListScreen
-import com.blessingsoftware.blessingplay.home.screens.play_list.presentation.PlayListScreen
+import com.blessingsoftware.blessingplay.home.screens.song_list.presentation.SongListScreen
+import com.blessingsoftware.blessingplay.home.screens.playlist.presentation.PlayListScreen
 import com.blessingsoftware.blessingplay.home.screens.setting.presentation.SettingScreen
 
 @ExperimentalMaterial3Api
@@ -44,8 +40,8 @@ fun HomeScreen(navController: NavController) {
 
     val bottomNavItems = listOf(
         BottomNavItem(
-            title = "Library",
-            route = "library",
+            title = "Song list",
+            route = "song_list",
             selectedIcon = Icons.Filled.Menu,
             unselectedIcon = Icons.Outlined.Menu
         ),
@@ -70,10 +66,10 @@ fun HomeScreen(navController: NavController) {
     ) { paddingValues ->
         NavHost(
             navController = bottomNavController,
-            startDestination = "library",
+            startDestination = "song_list",
             modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding())
         ) {
-            composable("library") {
+            composable("song_list") {
                 SongListScreen()
             }
             composable("playlist") {
@@ -108,6 +104,7 @@ fun BottomNavigationBar(
                 label = {
                     Text(
                         text = item.title,
+                        fontSize = 10.sp,
                         color = if (currentRoute == item.route) Color.Green else Color.White
                     )
                 },
@@ -115,7 +112,7 @@ fun BottomNavigationBar(
                     Icon(
                         imageVector = if (currentRoute == item.route) item.selectedIcon else item.unselectedIcon,
                         contentDescription = item.title,
-                        tint = if (currentRoute == item.route) Color.Green else Color.White
+                        tint = if (currentRoute == item.route) Color.Green else Color.White,
                     )
                 }
             )

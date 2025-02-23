@@ -1,4 +1,4 @@
-package com.blessingsoftware.blessingplay.home.screens.library.song_list.presentation
+package com.blessingsoftware.blessingplay.home.screens.song_list.presentation
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -127,63 +127,74 @@ fun SongListScreen(
 
     Scaffold(
         topBar = {
-            UnderlinedSearchTextField(
-                value = searchQuery,
-                onValueChange = { songListViewModel.setSearchQuery(it) },
-                placeholder = "Search songs...",
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 8.dp),
-                onImeAction = {
-                    coroutineScope.launch {
-                        listState.animateScrollToItem(
-                            index = queryIndexes.first()
-                        )
-                        currentQueryIndex.value = 0
-                    }
-                },
-                onUp = {
-                    coroutineScope.launch {
-                        if (queryIndexes.isNotEmpty()) {
-                            val prevIndex = if (currentQueryIndex.value > 0) {
-                                currentQueryIndex.value - 1
-                            } else {
-                                queryIndexes.size - 1
-                            }
-
-                            currentQueryIndex.value = prevIndex
-
+            Column {
+                Text(
+                    text = "Song list",
+                    fontSize = 20.sp,
+                    color = Color.White,
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                )
+                UnderlinedSearchTextField(
+                    value = searchQuery,
+                    onValueChange = { songListViewModel.setSearchQuery(it) },
+                    placeholder = "Search songs...",
+                    modifier = Modifier.fillMaxWidth(),
+                    onImeAction = {
+                        coroutineScope.launch {
                             listState.animateScrollToItem(
-                                index = queryIndexes[prevIndex]
+                                index = queryIndexes.first()
                             )
+                            currentQueryIndex.value = 0
                         }
-                    }
-                },
-                onDown = {
-                    coroutineScope.launch {
-                        if (queryIndexes.isNotEmpty()) {
-                            val nextIndex = if (currentQueryIndex.value < queryIndexes.size - 1) {
-                                currentQueryIndex.value + 1
-                            } else {
-                                0
+                    },
+                    onUp = {
+                        coroutineScope.launch {
+                            if (queryIndexes.isNotEmpty()) {
+                                val prevIndex = if (currentQueryIndex.value > 0) {
+                                    currentQueryIndex.value - 1
+                                } else {
+                                    queryIndexes.size - 1
+                                }
+
+                                currentQueryIndex.value = prevIndex
+
+                                listState.animateScrollToItem(
+                                    index = queryIndexes[prevIndex]
+                                )
                             }
-
-                            currentQueryIndex.value = nextIndex
-
-                            listState.animateScrollToItem(
-                                index = queryIndexes[nextIndex],
-                                scrollOffset = 0
-                            )
                         }
-                    }
-                },
-                onClear = {
-                    songListViewModel.setSearchQuery("")
-                    currentQueryIndex.value = -1
-                },
-                result = queryIndexes.size,
-                currentIndex = currentQueryIndex.value + 1
-            )
+                    },
+                    onDown = {
+                        coroutineScope.launch {
+                            if (queryIndexes.isNotEmpty()) {
+                                val nextIndex =
+                                    if (currentQueryIndex.value < queryIndexes.size - 1) {
+                                        currentQueryIndex.value + 1
+                                    } else {
+                                        0
+                                    }
+
+                                currentQueryIndex.value = nextIndex
+
+                                listState.animateScrollToItem(
+                                    index = queryIndexes[nextIndex],
+                                    scrollOffset = 0
+                                )
+                            }
+                        }
+                    },
+                    onClear = {
+                        songListViewModel.setSearchQuery("")
+                        currentQueryIndex.value = -1
+                    },
+                    result = queryIndexes.size,
+                    currentIndex = currentQueryIndex.value + 1
+                )
+            }
         }
     ) { paddingValues ->
         PullToRefreshBox(
@@ -284,9 +295,8 @@ fun SongListScreen(
                     songListViewModel.setSongStateForUpdate(null)
                     songListViewModel.setRevealedItemId(null)
                 },
-                title = "Update",
-                buttonBackgroundColor = Color.Blue,
-                buttonTextColor = Color.White
+                isEnabled = updateTitle.value.isNotBlank() && updateArtist.value.isNotBlank(),
+                title = "Update"
             ) {
                 SongUpdateDialog(
                     updateTitle = updateTitle,
@@ -309,8 +319,7 @@ fun SongListScreen(
                     songListViewModel.setRevealedItemId(null)
                 },
                 title = "Delete",
-                buttonBackgroundColor = Color.Red,
-                buttonTextColor = Color.White
+                buttonBackgroundColor = Color.Red
             ) {
                 SongDeleteDialog(
                     deleteTitle = songStateForDelete?.title ?: ""
@@ -472,7 +481,7 @@ private fun UnderlinedSearchTextField(
                     .fillMaxWidth()
                     .align(Alignment.CenterStart)
                     .padding(horizontal = 2.dp)
-                    .padding(bottom = 10.dp),
+                    .padding(vertical = 12.dp),
                 decorationBox = { innerTextField ->
                     Box(
                         modifier = Modifier
@@ -485,7 +494,7 @@ private fun UnderlinedSearchTextField(
                                 style = textStyle.copy(
                                     color = Color.LightGray,
                                     fontStyle = FontStyle.Italic
-                                ),
+                                )
                             )
                         }
                         innerTextField()
@@ -707,7 +716,7 @@ private fun SongDetailDialog(
 private fun TextDetail(
     title: String,
     detail: String
-){
+) {
     Text(
         text = buildAnnotatedString {
             withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {

@@ -24,6 +24,7 @@ fun HomeDialog(
     modifier: Modifier = Modifier,
     onVisible: Boolean,
     onSubmit: () -> Unit,
+    isEnabled: Boolean = true,
     onDismiss: () -> Unit,
     content: @Composable () -> Unit
 ) {
@@ -56,9 +57,13 @@ fun HomeDialog(
                                 title = title ?: "OK",
                                 modifier = Modifier
                                     .weight(1f)
-                                    .background(buttonBackgroundColor ?: Color.Blue),
+                                    .background(
+                                        if (isEnabled) buttonBackgroundColor
+                                            ?: Color.Blue else Color.LightGray
+                                    ),
                                 textColor = buttonTextColor ?: Color.White,
-                                onClick = onSubmit
+                                onClick = onSubmit,
+                                isEnabled = isEnabled
                             )
                         }
                     }
@@ -73,11 +78,13 @@ fun HomeDialogButton(
     title: String,
     modifier: Modifier = Modifier,
     textColor: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isEnabled: Boolean = true
 ) {
     TextButton(
         onClick = onClick,
-        modifier = modifier
+        modifier = modifier,
+        enabled = isEnabled
     ) {
         Text(text = title, color = textColor)
     }

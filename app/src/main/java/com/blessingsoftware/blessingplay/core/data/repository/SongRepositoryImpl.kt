@@ -5,8 +5,7 @@ import android.content.Context
 import android.database.Cursor
 import android.net.Uri
 import android.provider.MediaStore
-import android.util.Log
-import com.blessingsoftware.blessingplay.core.data.local.SongDb
+import com.blessingsoftware.blessingplay.core.data.local.AppDb
 import com.blessingsoftware.blessingplay.core.data.local.SongEntity
 import com.blessingsoftware.blessingplay.core.data.mapper.toSong
 import com.blessingsoftware.blessingplay.core.data.mapper.toSongEntityForDelete
@@ -20,10 +19,10 @@ import kotlinx.coroutines.withContext
 
 class SongRepositoryImpl(
     @ApplicationContext private val context: Context,
-    songDb: SongDb
+    appDb: AppDb
 ) : SongRepository {
-    private val songDao = songDb.songDao
-    private val songRemovedDao = songDb.songRemovedDao
+    private val songDao = appDb.songDao
+    private val songRemovedDao = appDb.songRemovedDao
 
     override suspend fun loadMediaFileAndSaveToDb(): Unit = withContext(Dispatchers.IO) {
         val songEntityList = getMediaFile();
