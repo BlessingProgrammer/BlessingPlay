@@ -35,6 +35,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -54,17 +55,24 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.blessingsoftware.blessingplay.R
 import com.blessingsoftware.blessingplay.core.domain.model.Song
+import com.blessingsoftware.blessingplay.core.presentation.utils.formatDateModified
+import com.blessingsoftware.blessingplay.core.presentation.utils.formatDuration
+import com.blessingsoftware.blessingplay.core.presentation.utils.formatSize
 import com.blessingsoftware.blessingplay.home.presentation.component.ActionIcon
 import com.blessingsoftware.blessingplay.home.presentation.component.HomeDialog
 import com.blessingsoftware.blessingplay.home.presentation.component.OutlinedTextFiled
@@ -95,6 +103,8 @@ fun SongListScreen(
     val updateArtist = remember { mutableStateOf("") }
 
     val songStateForDelete by songListViewModel.songStateForDelete.collectAsState()
+
+    val songStateForDetail by songListViewModel.songStateForDetail.collectAsState()
 
     val extendDialogVisible = remember { mutableStateOf(false) }
 
@@ -205,10 +215,10 @@ fun SongListScreen(
                         key = { _, song -> song.id }
                     ) { _, song ->
                         SwipeAbleItemWithActions(
-                            isRevealed = revealedItemId == song.id.toString(),
-                            onExpanded = { songListViewModel.setRevealedItemId(song.id.toString()) },
+                            isRevealed = revealedItemId == song.id,
+                            onExpanded = { songListViewModel.setRevealedItemId(song.id) },
                             onCollapsed = {
-                                if (revealedItemId == song.id.toString()) {
+                                if (revealedItemId == song.id) {
                                     songListViewModel.setRevealedItemId(null)
                                 }
                             },
@@ -260,7 +270,7 @@ fun SongListScreen(
 
             HomeDialog(
                 isMultiButton = true,
-                onVisible = songStateForUpdate !== null,
+                onVisible = songStateForUpdate != null,
                 onSubmit = {
                     songStateForUpdate?.let {
                         songListViewModel.updateSong(
@@ -286,7 +296,7 @@ fun SongListScreen(
 
             HomeDialog(
                 isMultiButton = true,
-                onVisible = songStateForDelete !== null,
+                onVisible = songStateForDelete != null,
                 onSubmit = {
                     songStateForDelete?.let {
                         songListViewModel.deleteSong(
@@ -316,7 +326,38 @@ fun SongListScreen(
                     songListViewModel.setRevealedItemId(null)
                 }
             ) {
-                SongExtendDialog()
+                SongExtendDialog(
+                    onPlay = {
+
+                    },
+                    onNextPlay = {
+
+                    },
+                    onDetail = {
+                        songListViewModel.setSongStateForDetail(revealedItemId)
+                    },
+                    onAddToPlaylist = {
+
+                    },
+                    onAddToWaitingList = {
+
+                    }
+                )
+            }
+
+            HomeDialog(
+                isMultiButton = false,
+                onVisible = songStateForDetail != null,
+                onSubmit = {},
+                onDismiss = {
+                    songListViewModel.setSongStateForDetail(null)
+                }
+            ) {
+                songStateForDetail?.let {
+                    SongDetailDialog(
+                        song = it
+                    )
+                }
             }
         }
     }
@@ -433,9 +474,11 @@ private fun UnderlinedSearchTextField(
                     .padding(horizontal = 2.dp)
                     .padding(bottom = 10.dp),
                 decorationBox = { innerTextField ->
-                    Box(modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.CenterStart)) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.CenterStart)
+                    ) {
                         if (value.isEmpty()) {
                             Text(
                                 text = placeholder,
@@ -559,56 +602,124 @@ private fun SongUpdateDialog(
 
 @Composable
 private fun SongExtendDialog(
+    onPlay: () -> Unit,
+    onNextPlay: () -> Unit,
+    onDetail: () -> Unit,
+    onAddToPlaylist: () -> Unit,
+    onAddToWaitingList: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        SongExtraButton(
+            title = "Play",
+            onClick = { onPlay() }
+        )
+        SongExtraButton(
+            title = "Next play",
+            onClick = { onNextPlay() }
+        )
+        SongExtraButton(
+            title = "Detail",
+            onClick = { onDetail() }
+        )
+        SongExtraButton(
+            title = "Add to playlist",
+            onClick = { onAddToPlaylist() }
+        )
+        SongExtraButton(
+            title = "Add to waiting list",
+            onClick = { onAddToWaitingList() }
+        )
+    }
+}
 
+@Composable
+private fun SongExtraButton(
+    title: String,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawBehind {
+                drawLine(
+                    color = Color.LightGray,
+                    start = Offset(0f, size.height),
+                    end = Offset(size.width, size.height),
+                    strokeWidth = 2f
+                )
+            }
+            .clickable { onClick() }
+            .padding(vertical = 10.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = title,
+            color = Color.White,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun SongDetailDialog(
+    song: Song
 ) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        Button(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.Transparent),
-            onClick = { /*TODO*/ }
-        ) {
-            Text(text = "Play")
-        }
-        Spacer(modifier = Modifier.height(5.dp))
-        Button(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.Transparent),
-            onClick = { /*TODO*/ }
-        ) {
-            Text(text = "Next play")
-        }
-        Spacer(modifier = Modifier.height(5.dp))
-        Button(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.Transparent),
-            onClick = { /*TODO*/ }
-        ) {
-            Text(text = "Detail")
-        }
-        Spacer(modifier = Modifier.height(5.dp))
-        Button(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.Transparent),
-            onClick = { /*TODO*/ }
-        ) {
-            Text(text = "Add to playlist")
-        }
-        Spacer(modifier = Modifier.height(5.dp))
-        Button(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.Transparent),
-            onClick = { /*TODO*/ }
-        ) {
-            Text(text = "Add to waiting list")
-        }
+        TextDetail(
+            title = "Title",
+            detail = song.title
+        )
+        TextDetail(
+            title = "Artist",
+            detail = song.artist
+        )
+        TextDetail(
+            title = "Type",
+            detail = song.mimeType
+        )
+        TextDetail(
+            title = "Format",
+            detail = song.format
+        )
+        TextDetail(
+            title = "Size",
+            detail = formatSize(song.size)
+        )
+        TextDetail(
+            title = "Duration",
+            detail = formatDuration(song.duration)
+        )
+        TextDetail(
+            title = "Date modified",
+            detail = formatDateModified(song.dateModified)
+        )
     }
+}
+
+@Composable
+private fun TextDetail(
+    title: String,
+    detail: String
+){
+    Text(
+        text = buildAnnotatedString {
+            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                append("$title: ")
+            }
+            append("\n")
+
+            withStyle(style = SpanStyle(fontStyle = FontStyle.Italic, fontSize = 15.sp)) {
+                append(detail)
+            }
+        },
+        fontSize = 17.sp,
+        modifier = Modifier.padding(bottom = 8.dp),
+    )
 }

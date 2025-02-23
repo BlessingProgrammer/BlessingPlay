@@ -94,6 +94,7 @@ class SongRepositoryImpl(
                 val albumId = it.getLong(albumIdColumn)
 
                 val albumArt = getAlbumArt(context, albumId)
+                val fileFormat = filePath.substringAfterLast('.', "unknown")
 
                 val songEntity = SongEntity(
                     fileId = it.getLong(idColumn),
@@ -103,7 +104,7 @@ class SongRepositoryImpl(
                     albumArt = albumArt,
                     artistId = it.getInt(artistIdColumn),
                     artist = it.getString(artistColumn),
-                    format = it.getString(mimeTypeColumn),
+                    format = fileFormat,
                     mimeType = it.getString(mimeTypeColumn),
                     size = it.getLong(sizeColumn),
                     duration = it.getLong(durationColumn),

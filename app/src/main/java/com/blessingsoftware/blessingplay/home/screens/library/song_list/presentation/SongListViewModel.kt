@@ -13,6 +13,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -27,7 +28,7 @@ class SongListViewModel @Inject constructor(
     private val _songListState = MutableStateFlow<Map<Char, List<Song>>>(emptyMap())
     val songListState = _songListState.asStateFlow()
 
-    private val _revealedItemId = MutableStateFlow<String?>(null)
+    private val _revealedItemId = MutableStateFlow<Long?>(null)
     val revealedItemId = _revealedItemId.asStateFlow()
 
     private val _isLoading = MutableStateFlow<Boolean>(false)
@@ -41,6 +42,9 @@ class SongListViewModel @Inject constructor(
 
     private val _songStateForDelete = MutableStateFlow<Song?>(null)
     val songStateForDelete = _songStateForDelete.asStateFlow()
+
+    private val _songStateForDetail = MutableStateFlow<Song?>(null)
+    val songStateForDetail = _songStateForDetail.asStateFlow()
 
     private val _updateIndex = MutableStateFlow<Int?>(null)
     val updateIndex = _updateIndex.asStateFlow()
@@ -71,6 +75,12 @@ class SongListViewModel @Inject constructor(
         }
     }
 
+    fun setRevealedItemId(itemId: Long?) {
+        viewModelScope.launch {
+            _revealedItemId.value = itemId
+        }
+    }
+
     fun setSongStateForUpdate(song: Song?) {
         viewModelScope.launch {
             _songStateForUpdate.value = song
@@ -80,6 +90,15 @@ class SongListViewModel @Inject constructor(
     fun setSongStateForDelete(song: Song?) {
         viewModelScope.launch {
             _songStateForDelete.value = song
+        }
+    }
+
+    fun setSongStateForDetail(id: Long?) {
+        viewModelScope.launch {
+            if (id != null) {
+                val song = _songListState.value.values.flatten().find { it.id == id }
+                _songStateForDetail.value = song ?: return@launch
+            } else _songStateForDetail.value = null
         }
     }
 
@@ -125,12 +144,6 @@ class SongListViewModel @Inject constructor(
             _songStateForDelete.value = null
             _revealedItemId.value = null
             loadSongs()
-        }
-    }
-
-    fun setRevealedItemId(itemId: String?) {
-        viewModelScope.launch {
-            _revealedItemId.value = itemId
         }
     }
 
