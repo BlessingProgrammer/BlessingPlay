@@ -1,6 +1,5 @@
 package com.blessingsoftware.blessingplay.home.screens.song_list.presentation
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,14 +27,12 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
@@ -85,11 +82,7 @@ fun SongListScreen(
     songListViewModel: SongListViewModel = hiltViewModel()
 ) {
     val songListState by songListViewModel.songListState.collectAsState()
-    val revealedItemId by songListViewModel.revealedItemId.collectAsState()
-    val isLoading by songListViewModel.isLoading.collectAsState()
-    val searchQuery by songListViewModel.searchQuery.collectAsState()
     val queryIndexes = songListViewModel.calculateScrollTargetIndex()
-    val updateIndex by songListViewModel.updateIndex.collectAsState()
 
     val currentQueryIndex = remember { mutableIntStateOf(-1) }
 
@@ -98,27 +91,22 @@ fun SongListScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
-    val songStateForUpdate by songListViewModel.songStateForUpdate.collectAsState()
     val updateTitle = remember { mutableStateOf("") }
     val updateArtist = remember { mutableStateOf("") }
 
-    val songStateForDelete by songListViewModel.songStateForDelete.collectAsState()
-
-    val songStateForDetail by songListViewModel.songStateForDetail.collectAsState()
-
     val extendDialogVisible = remember { mutableStateOf(false) }
 
-    LaunchedEffect(songStateForUpdate) {
-        updateTitle.value = songStateForUpdate?.title ?: ""
-        updateArtist.value = songStateForUpdate?.artist ?: ""
+    LaunchedEffect(songListState.songStateForUpdate) {
+        updateTitle.value = songListState.songStateForUpdate?.title ?: ""
+        updateArtist.value = songListState.songStateForUpdate?.artist ?: ""
     }
 
-    LaunchedEffect(updateIndex) {
-        updateIndex?.let { listState.animateScrollToItem(index = it, scrollOffset = 0) }
+    LaunchedEffect(songListState.updateIndex) {
+        songListState.updateIndex?.let { listState.animateScrollToItem(index = it, scrollOffset = 0) }
     }
 
-    LaunchedEffect(searchQuery) {
-        if (searchQuery.isBlank()) {
+    LaunchedEffect(songListState.searchQuery) {
+        if (songListState.searchQuery.isBlank()) {
             if (listState.firstVisibleItemIndex != 0) {
                 listState.scrollToItem(0)
             }
@@ -139,7 +127,7 @@ fun SongListScreen(
                         .padding(vertical = 6.dp)
                 )
                 UnderlinedSearchTextField(
-                    value = searchQuery,
+                    value = songListState.searchQuery,
                     onValueChange = { songListViewModel.setSearchQuery(it) },
                     placeholder = "Search songs...",
                     modifier = Modifier.fillMaxWidth(),
@@ -199,7 +187,7 @@ fun SongListScreen(
     ) { paddingValues ->
         PullToRefreshBox(
             state = refreshState,
-            isRefreshing = isLoading,
+            isRefreshing = songListState.isLoading,
             onRefresh = {
                 songListViewModel.pullToRefresh()
             }
@@ -210,7 +198,7 @@ fun SongListScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                songListState.forEach { (header, songs) ->
+                songListState.songList.forEach { (header, songs) ->
                     item {
                         Text(
                             text = header.toString(),
@@ -226,10 +214,10 @@ fun SongListScreen(
                         key = { _, song -> song.id }
                     ) { _, song ->
                         SwipeAbleItemWithActions(
-                            isRevealed = revealedItemId == song.id,
+                            isRevealed = songListState.revealedItemId == song.id,
                             onExpanded = { songListViewModel.setRevealedItemId(song.id) },
                             onCollapsed = {
-                                if (revealedItemId == song.id) {
+                                if (songListState.revealedItemId == song.id) {
                                     songListViewModel.setRevealedItemId(null)
                                 }
                             },
@@ -269,7 +257,7 @@ fun SongListScreen(
                             ListSongItem(
                                 song = song,
                                 onClick = {
-                                    if (revealedItemId != null) {
+                                    if (songListState.revealedItemId != null) {
                                         songListViewModel.setRevealedItemId(null)
                                     }
                                 }
@@ -281,9 +269,9 @@ fun SongListScreen(
 
             HomeDialog(
                 isMultiButton = true,
-                onVisible = songStateForUpdate != null,
+                onVisible = songListState.songStateForUpdate != null,
                 onSubmit = {
-                    songStateForUpdate?.let {
+                    songListState.songStateForUpdate?.let {
                         songListViewModel.updateSong(
                             song = it,
                             updateTitle = updateTitle.value,
@@ -306,9 +294,9 @@ fun SongListScreen(
 
             HomeDialog(
                 isMultiButton = true,
-                onVisible = songStateForDelete != null,
+                onVisible = songListState.songStateForDelete != null,
                 onSubmit = {
-                    songStateForDelete?.let {
+                    songListState.songStateForDelete?.let {
                         songListViewModel.deleteSong(
                             song = it
                         )
@@ -322,7 +310,7 @@ fun SongListScreen(
                 buttonBackgroundColor = Color.Red
             ) {
                 SongDeleteDialog(
-                    deleteTitle = songStateForDelete?.title ?: ""
+                    deleteTitle = songListState.songStateForDelete?.title ?: ""
                 )
             }
 
@@ -343,7 +331,7 @@ fun SongListScreen(
 
                     },
                     onDetail = {
-                        songListViewModel.setSongStateForDetail(revealedItemId)
+                        songListViewModel.setSongStateForDetail(songListState.revealedItemId)
                     },
                     onAddToPlaylist = {
 
@@ -356,13 +344,13 @@ fun SongListScreen(
 
             HomeDialog(
                 isMultiButton = false,
-                onVisible = songStateForDetail != null,
+                onVisible = songListState.songStateForDetail != null,
                 onSubmit = {},
                 onDismiss = {
                     songListViewModel.setSongStateForDetail(null)
                 }
             ) {
-                songStateForDetail?.let {
+                songListState.songStateForDetail?.let {
                     SongDetailDialog(
                         song = it
                     )

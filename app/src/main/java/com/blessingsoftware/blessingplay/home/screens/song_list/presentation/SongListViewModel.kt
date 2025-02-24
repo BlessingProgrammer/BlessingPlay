@@ -26,29 +26,8 @@ class SongListViewModel @Inject constructor(
     private val deleteSong: DeleteSong
 ) : ViewModel() {
 
-    private val _songListState = MutableStateFlow<Map<Char, List<Song>>>(emptyMap())
+    private val _songListState = MutableStateFlow(SongListState())
     val songListState = _songListState.asStateFlow()
-
-    private val _revealedItemId = MutableStateFlow<Long?>(null)
-    val revealedItemId = _revealedItemId.asStateFlow()
-
-    private val _isLoading = MutableStateFlow<Boolean>(false)
-    val isLoading = _isLoading.asStateFlow()
-
-    private val _searchQuery = MutableStateFlow("")
-    val searchQuery = _searchQuery.asStateFlow()
-
-    private val _songStateForUpdate = MutableStateFlow<Song?>(null)
-    val songStateForUpdate = _songStateForUpdate.asStateFlow()
-
-    private val _songStateForDelete = MutableStateFlow<Song?>(null)
-    val songStateForDelete = _songStateForDelete.asStateFlow()
-
-    private val _songStateForDetail = MutableStateFlow<Song?>(null)
-    val songStateForDetail = _songStateForDetail.asStateFlow()
-
-    private val _updateIndex = MutableStateFlow<Int?>(null)
-    val updateIndex = _updateIndex.asStateFlow()
 
     init {
         loadSongs()
@@ -57,43 +36,57 @@ class SongListViewModel @Inject constructor(
     private fun loadSongs() {
         viewModelScope.launch {
             _songListState.update {
-                getAllSongs.invoke()
+                it.copy(songList = getAllSongs.invoke()
                     .sortedBy { it.title.trim() }
                     .groupBy {
                         val normalizedChar = normalizeFirstChar(it.title.trim().firstOrNull())
                         if (normalizedChar in 'A'..'Z') normalizedChar else '#'
-                    }
+                    })
             }
         }
     }
 
     fun pullToRefresh() {
         viewModelScope.launch {
-            _isLoading.update { true }
+            _songListState.update {
+                it.copy(isLoading = true)
+            }
             delay(1500)
             insertSongs.invoke()
             loadSongs()
-            _isLoading.update { false }
+            _songListState.update {
+                it.copy(isLoading = false)
+            }
         }
     }
 
     fun setRevealedItemId(itemId: Long?) {
-        _revealedItemId.update { itemId }
+        _songListState.update {
+            it.copy(revealedItemId = itemId)
+        }
     }
 
     fun setSongStateForUpdate(song: Song?) {
-        _songStateForUpdate.update { song }
+        _songListState.update {
+            it.copy(songStateForUpdate = song)
+        }
     }
 
     fun setSongStateForDelete(song: Song?) {
-        _songStateForDelete.update { song }
+        _songListState.update {
+            it.copy(songStateForDelete = song)
+        }
     }
 
     fun setSongStateForDetail(id: Long?) {
         if (id != null) {
-            val song = _songListState.value.values.flatten().find { it.id == id }
-            _songStateForDetail.update { song }
-        } else _songStateForDetail.update { null }
+            val song = _songListState.value.songList.values.flatten().find { it.id == id }
+            _songListState.update {
+                it.copy(songStateForDetail = song)
+            }
+        } else _songListState.update {
+            it.copy(songStateForDetail = null)
+        }
     }
 
     fun updateSong(song: Song, updateTitle: String, updateArtist: String) {
@@ -104,7 +97,7 @@ class SongListViewModel @Inject constructor(
                 normalizeFirstChar(updatedSong.title.trim().firstOrNull()).let {
                     if (it in 'A'..'Z') it else '#'
                 }
-            val currentMap = _songListState.value
+            val currentMap = _songListState.value.songList
             val headerToUpdate = currentMap.entries.find { entry ->
                 entry.value.any { it.id == song.id }
             }?.key
@@ -115,25 +108,29 @@ class SongListViewModel @Inject constructor(
                 if (headerToUpdate == newHeader) {
                     val newGroup = (oldGroup + updatedSong).sortedBy { it.title.trim() }
                     _songListState.update {
-                        currentMap.toMutableMap().apply {
+                        it.copy(songList = currentMap.toMutableMap().apply {
                             put(headerToUpdate, newGroup)
-                        }
+                        })
                     }
                 } else {
                     val newOldGroup = oldGroup.sortedBy { it.title.trim() }
                     val newGroup = (currentMap[newHeader] ?: emptyList()) + updatedSong
                     _songListState.update {
-                        currentMap.toMutableMap().apply {
+                        it.copy(songList = currentMap.toMutableMap().apply {
                             put(headerToUpdate, newOldGroup)
                             put(newHeader, newGroup.sortedBy { it.title.trim() })
-                        }
+                        })
                     }
                 }
             }
-            _songStateForUpdate.update { null }
-            _revealedItemId.update { null }
-            _updateIndex.update {
-                calculateScrollTargetIndexForSong(song.id)
+            _songListState.update {
+                it.copy(songStateForUpdate = null)
+            }
+            _songListState.update {
+                it.copy(revealedItemId = null)
+            }
+            _songListState.update {
+                it.copy(updateIndex = calculateScrollTargetIndexForSong(updatedSong.id))
             }
         }
     }
@@ -141,24 +138,30 @@ class SongListViewModel @Inject constructor(
     fun deleteSong(song: Song) {
         viewModelScope.launch {
             deleteSong.invoke(song)
-            _songStateForDelete.update { null }
-            _revealedItemId.update { null }
+            _songListState.update {
+                it.copy(songStateForDelete = null)
+            }
+            _songListState.update {
+                it.copy(revealedItemId = null)
+            }
             loadSongs()
         }
     }
 
     fun setSearchQuery(query: String) {
-        _searchQuery.update { query }
+        _songListState.update {
+            it.copy(searchQuery = query)
+        }
     }
 
     fun calculateScrollTargetIndex(): List<Int> {
-        val query = _searchQuery.value
+        val query = _songListState.value.searchQuery
         if (query.isBlank()) return emptyList()
 
         val indexes = mutableListOf<Int>()
         var index = -1
 
-        for ((header, songs) in _songListState.value) {
+        for ((header, songs) in _songListState.value.songList) {
             index++
 
             if (header.toString().contains(query, ignoreCase = true)) {
@@ -180,7 +183,7 @@ class SongListViewModel @Inject constructor(
     private fun calculateScrollTargetIndexForSong(songId: Long): Int {
         var index = 0
         var found = false
-        outer@ for ((header, songs) in _songListState.value) {
+        outer@ for ((header, songs) in _songListState.value.songList) {
             index++
             for (song in songs) {
                 if (song.id == songId) {
