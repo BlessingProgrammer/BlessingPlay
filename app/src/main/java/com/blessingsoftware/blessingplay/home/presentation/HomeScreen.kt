@@ -18,19 +18,18 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.blessingsoftware.blessingplay.home.screens.library.song_list.presentation.SongListScreen
-import com.blessingsoftware.blessingplay.home.screens.play_list.presentation.PlayListScreen
+import com.blessingsoftware.blessingplay.home.screens.song_list.presentation.SongListScreen
+import com.blessingsoftware.blessingplay.home.screens.playlist.presentation.PlayListScreen
 import com.blessingsoftware.blessingplay.home.screens.setting.presentation.SettingScreen
 
 @ExperimentalMaterial3Api
@@ -41,14 +40,14 @@ fun HomeScreen(navController: NavController) {
 
     val bottomNavItems = listOf(
         BottomNavItem(
-            title = "Library",
-            route = "library",
+            title = "Song list",
+            route = "song_list",
             selectedIcon = Icons.Filled.Menu,
             unselectedIcon = Icons.Outlined.Menu
         ),
         BottomNavItem(
-            title = "Play List",
-            route = "play_list",
+            title = "Playlist",
+            route = "playlist",
             selectedIcon = Icons.Filled.PlayArrow,
             unselectedIcon = Icons.Outlined.PlayArrow
         ),
@@ -60,61 +59,63 @@ fun HomeScreen(navController: NavController) {
         ),
     )
 
-    var selected by remember { mutableIntStateOf(0) }
-
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                modifier = Modifier.height(70.dp)
-            ) {
-                bottomNavItems.forEachIndexed { index, item ->
-                    NavigationBarItem(
-                        selected = false,
-                        onClick = {
-                            selected = index
-                            bottomNavController.navigate(item.route){
-                                popUpTo(bottomNavController.graph.startDestinationId) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        label = {
-                            Text(
-                                text = item.title,
-                                color = if (index == selected) Color.Green else Color.White
-                            )
-                        },
-                        icon = {
-                            Icon(
-                                imageVector = if (index == selected) {
-                                    item.selectedIcon
-                                } else item.unselectedIcon,
-                                contentDescription = item.title,
-                                tint = if (index == selected) Color.Green else Color.White
-                            )
-                        },
-                    )
-
-                }
-            }
+            BottomNavigationBar(bottomNavController, bottomNavItems)
         }
     ) { paddingValues ->
         NavHost(
             navController = bottomNavController,
-            startDestination = "library",
-            modifier = Modifier.padding(paddingValues)
+            startDestination = "song_list",
+            modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding())
         ) {
-            composable("library") {
+            composable("song_list") {
                 SongListScreen()
             }
-            composable("play_list") {
+            composable("playlist") {
                 PlayListScreen()
             }
             composable("setting") {
                 SettingScreen()
             }
+        }
+    }
+}
+
+@Composable
+fun BottomNavigationBar(
+    bottomNavController: NavController,
+    bottomNavItems: List<BottomNavItem>
+) {
+    val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    NavigationBar(modifier = Modifier.height(65.dp)) {
+        bottomNavItems.forEach { item ->
+            NavigationBarItem(
+                selected = false,
+                onClick = {
+                    bottomNavController.navigate(item.route) {
+                        popUpTo(bottomNavController.graph.startDestinationId) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+                label = {
+                    Text(
+                        text = item.title,
+                        fontSize = 10.sp,
+                        color = if (currentRoute == item.route) Color.Green else Color.White
+                    )
+                },
+                icon = {
+                    Icon(
+                        imageVector = if (currentRoute == item.route) item.selectedIcon else item.unselectedIcon,
+                        contentDescription = item.title,
+                        tint = if (currentRoute == item.route) Color.Green else Color.White,
+                    )
+                }
+            )
         }
     }
 }

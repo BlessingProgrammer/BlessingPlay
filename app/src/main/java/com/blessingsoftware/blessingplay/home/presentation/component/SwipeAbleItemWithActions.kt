@@ -1,6 +1,5 @@
 package com.blessingsoftware.blessingplay.home.presentation.component
 
-import androidx.compose.animation.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Box

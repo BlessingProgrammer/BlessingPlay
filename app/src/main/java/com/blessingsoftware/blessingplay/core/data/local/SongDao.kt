@@ -6,22 +6,21 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
-import androidx.room.Upsert
 
 @Dao
 interface SongDao {
     @Query("SELECT * FROM songEntity")
-    suspend fun getAllSongs(): List<SongEntity>
+    suspend fun getAllSongEntities(): List<SongEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertSongs(songEntities: List<SongEntity>)
+    suspend fun firstInsertSongEntities(songEntities: List<SongEntity>)
 
-    @Upsert
-    suspend fun upsertSong(songEntity: SongEntity)
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertSongEntities(songEntities: List<SongEntity>)
 
     @Update
-    suspend fun updateSong(songEntity: SongEntity)
+    suspend fun updateSongEntity(songEntity: SongEntity)
 
     @Delete
-    suspend fun deleteSong(songEntity: SongEntity)
+    suspend fun deleteSongEntity(songEntity: SongEntity)
 }
