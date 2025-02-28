@@ -6,7 +6,7 @@ import android.database.Cursor
 import android.net.Uri
 import android.provider.MediaStore
 import com.blessingsoftware.blessingplay.core.data.local.AppDb
-import com.blessingsoftware.blessingplay.core.data.local.SongEntity
+import com.blessingsoftware.blessingplay.core.data.local.entities.SongEntity
 import com.blessingsoftware.blessingplay.core.data.mapper.toSong
 import com.blessingsoftware.blessingplay.core.data.mapper.toSongEntityForDelete
 import com.blessingsoftware.blessingplay.core.data.mapper.toSongEntityForUpdate
@@ -54,7 +54,7 @@ class SongRepositoryImpl(
     }
 
     override suspend fun deleteSong(song: Song) {
-        songDao.deleteSongEntity(song.toSongEntityForDelete())
+        songDao.deleteSongEntity(songEntity = song.toSongEntityForDelete())
         songRemovedDao.upsertSongRemovedEntity(song.toSongRemovedEntity())
     }
 

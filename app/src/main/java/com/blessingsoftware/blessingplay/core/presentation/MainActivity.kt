@@ -32,11 +32,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import androidx.navigation.toRoute
 import com.blessingsoftware.blessingplay.core.presentation.ui.theme.BlessingPlayTheme
 import com.blessingsoftware.blessingplay.home.presentation.HomeScreen
+import com.blessingsoftware.blessingplay.playlist_songs.presentation.PlaylistSongsScreen
+import com.blessingsoftware.blessingplay.playlist_songs.presentation.PlaylistSongsViewModel
 import com.blessingsoftware.blessingplay.splash.presentation.SplashScreen
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
@@ -67,7 +73,7 @@ class MainActivity : ComponentActivity() {
         NavHost(
             modifier = modifier
                 .fillMaxSize()
-                .padding(WindowInsets.systemBars.asPaddingValues())
+                .padding(top = WindowInsets.systemBars.asPaddingValues().calculateTopPadding())
                 .background(Color.Transparent),
             navController = navController,
             startDestination = Screen.Splash
@@ -87,6 +93,14 @@ class MainActivity : ComponentActivity() {
                 HomeScreen(navController)
             }
 
+            composable<Screen.PlaylistSongsScreen> {
+                val args = it.toRoute<Screen.PlaylistSongsScreen>()
+                PlaylistSongsScreen(
+                    navController = navController,
+                    playlistId = args.playlistId,
+                    name = args.name
+                )
+            }
         }
     }
 }
@@ -109,27 +123,36 @@ private fun PermissionHandler(onPermissionResult: @Composable (Boolean) -> Unit)
     val context = LocalContext.current
     var isPermissionGranted by remember { mutableStateOf(false) }
 
+    val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        arrayOf(
+            Manifest.permission.READ_MEDIA_IMAGES,
+            Manifest.permission.READ_MEDIA_VIDEO,
+            Manifest.permission.READ_MEDIA_AUDIO
+        )
+    } else {
+        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+    }
+
     val requestPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) { granted ->
-        isPermissionGranted = granted
-        if (!granted) {
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        isPermissionGranted = results.values.all { it }
+        if (!isPermissionGranted) {
             Toast.makeText(
                 context,
-                "Ứng dụng cần cho phép truy cập bộ nhớ!",
+                "Ứng dụng cần quyền để truy cập bộ nhớ!",
                 Toast.LENGTH_SHORT
             ).show()
         }
     }
-
     LaunchedEffect(Unit) {
-        requestPermissionLauncher.launch(Manifest.permission.READ_EXTERNAL_STORAGE)
+        requestPermissionLauncher.launch(permissions)
     }
-
     if (isPermissionGranted) {
         onPermissionResult(true)
     }
 }
+
 
 
 

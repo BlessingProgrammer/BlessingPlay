@@ -17,7 +17,7 @@ class SplashViewModel @Inject constructor(
     private val loadMediaFileAndSaveToDb: LoadMediaFileAndSaveToDb,
     private val application: Application
 ) : ViewModel() {
-    private val _isLoading = MutableStateFlow<Boolean>(true)
+    private val _isLoading = MutableStateFlow(true)
     val isLoading = _isLoading.asStateFlow()
 
     init {

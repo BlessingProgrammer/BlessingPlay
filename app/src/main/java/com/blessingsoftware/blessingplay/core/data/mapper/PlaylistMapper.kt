@@ -1,11 +1,10 @@
 package com.blessingsoftware.blessingplay.core.data.mapper
 
-import com.blessingsoftware.blessingplay.core.data.local.PlaylistEntity
+import com.blessingsoftware.blessingplay.core.data.local.entities.PlaylistEntity
 import com.blessingsoftware.blessingplay.core.domain.model.Playlist
 
 fun Playlist.toPlaylistEntityForInsert(): PlaylistEntity {
     return PlaylistEntity(
-        id = id,
         name = name,
         thumbnail = thumbnail
     )

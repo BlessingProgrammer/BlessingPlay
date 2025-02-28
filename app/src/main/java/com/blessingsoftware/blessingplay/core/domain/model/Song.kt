@@ -13,7 +13,8 @@ data class Song(
     val mimeType: String,
     val size: Long,
     val duration: Long,
-    val dateModified: Long
+    val dateModified: Long,
+    val position: Long? = null
 )
 
 

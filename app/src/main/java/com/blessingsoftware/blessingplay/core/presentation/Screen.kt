@@ -8,4 +8,10 @@ sealed interface Screen {
 
     @Serializable
     data object Home : Screen
+
+    @Serializable
+    data class PlaylistSongsScreen(
+        val playlistId: Long,
+        val name: String
+    ) : Screen
 }

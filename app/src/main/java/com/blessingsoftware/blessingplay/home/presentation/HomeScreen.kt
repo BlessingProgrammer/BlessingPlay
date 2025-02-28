@@ -1,26 +1,37 @@
 package com.blessingsoftware.blessingplay.home.presentation
 
 import android.annotation.SuppressLint
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -28,8 +39,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.blessingsoftware.blessingplay.R
+import com.blessingsoftware.blessingplay.home.screens.music_player.presentation.MusicPlayerScreen
 import com.blessingsoftware.blessingplay.home.screens.song_list.presentation.SongListScreen
-import com.blessingsoftware.blessingplay.home.screens.playlist.presentation.PlayListScreen
+import com.blessingsoftware.blessingplay.home.screens.playlist.presentation.PlaylistScreen
 import com.blessingsoftware.blessingplay.home.screens.setting.presentation.SettingScreen
 
 @ExperimentalMaterial3Api
@@ -52,6 +65,12 @@ fun HomeScreen(navController: NavController) {
             unselectedIcon = Icons.Outlined.PlayArrow
         ),
         BottomNavItem(
+            title = "Album",
+            route = "album",
+            selectedIcon = Icons.Filled.Star,
+            unselectedIcon = Icons.Outlined.Star
+        ),
+        BottomNavItem(
             title = "Setting",
             route = "setting",
             selectedIcon = Icons.Filled.Settings,
@@ -59,40 +78,67 @@ fun HomeScreen(navController: NavController) {
         ),
     )
 
-    Scaffold(
-        bottomBar = {
-            BottomNavigationBar(bottomNavController, bottomNavItems)
-        }
-    ) { paddingValues ->
-        NavHost(
-            navController = bottomNavController,
-            startDestination = "song_list",
-            modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding())
+    Box {
+        Scaffold(
+            bottomBar = {
+                BottomNavigationBar(bottomNavController, bottomNavItems)
+            },
+            content = { paddingValues ->
+                NavHost(
+                    navController = bottomNavController,
+                    startDestination = "music_player",
+                    modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding())
+                ) {
+                    composable("song_list") { SongListScreen() }
+                    composable("playlist") { PlaylistScreen(navController = navController) }
+                    composable("music_player") { MusicPlayerScreen() }
+                    composable("album") { SettingScreen() }
+                    composable("setting") { SettingScreen() }
+                }
+            }
+        )
+
+        FloatingActionButton(
+            onClick = {
+                bottomNavController.navigate("music_player") {
+                    popUpTo(bottomNavController.graph.startDestinationId) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            },
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 25.dp)
+                .size(70.dp),
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.primary
         ) {
-            composable("song_list") {
-                SongListScreen()
-            }
-            composable("playlist") {
-                PlayListScreen()
-            }
-            composable("setting") {
-                SettingScreen()
-            }
+            Image(
+                painter = painterResource(id = R.drawable.music),
+                contentDescription = "Music player button",
+            )
         }
     }
+
 }
 
 @Composable
 fun BottomNavigationBar(
     bottomNavController: NavController,
-    bottomNavItems: List<BottomNavItem>
+    bottomNavItems: List<BottomNavItem>,
 ) {
     val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
-    NavigationBar(modifier = Modifier.height(65.dp)) {
+    NavigationBar(modifier = Modifier.height(75.dp)) {
         bottomNavItems.forEach { item ->
             NavigationBarItem(
+                modifier = Modifier
+                    .align(Alignment.CenterVertically)
+                    .padding(
+                        start = if (item.route == "album") 50.dp else 0.dp,
+                        end = if (item.route == "playlist") 50.dp else 0.dp
+                    ),
                 selected = false,
                 onClick = {
                     bottomNavController.navigate(item.route) {

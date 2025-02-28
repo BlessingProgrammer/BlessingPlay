@@ -27,10 +27,12 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -66,6 +68,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.blessingsoftware.blessingplay.R
+import com.blessingsoftware.blessingplay.core.domain.model.Playlist
 import com.blessingsoftware.blessingplay.core.domain.model.Song
 import com.blessingsoftware.blessingplay.core.presentation.utils.formatDateModified
 import com.blessingsoftware.blessingplay.core.presentation.utils.formatDuration
@@ -82,7 +85,6 @@ fun SongListScreen(
     songListViewModel: SongListViewModel = hiltViewModel()
 ) {
     val songListState by songListViewModel.songListState.collectAsState()
-    val queryIndexes = songListViewModel.calculateScrollTargetIndex()
 
     val currentQueryIndex = remember { mutableIntStateOf(-1) }
 
@@ -91,25 +93,36 @@ fun SongListScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
-    val updateTitle = remember { mutableStateOf("") }
-    val updateArtist = remember { mutableStateOf("") }
-
-    val extendDialogVisible = remember { mutableStateOf(false) }
-
-    LaunchedEffect(songListState.songStateForUpdate) {
-        updateTitle.value = songListState.songStateForUpdate?.title ?: ""
-        updateArtist.value = songListState.songStateForUpdate?.artist ?: ""
-    }
-
     LaunchedEffect(songListState.updateIndex) {
-        songListState.updateIndex?.let { listState.animateScrollToItem(index = it, scrollOffset = 0) }
+        songListState.updateIndex?.let {
+            listState.animateScrollToItem(
+                index = it,
+                scrollOffset = 0
+            )
+        }
     }
 
     LaunchedEffect(songListState.searchQuery) {
         if (songListState.searchQuery.isBlank()) {
+            songListViewModel.onAction(
+                SongListActions.UpdateIndexListSearching(emptyList())
+            )
             if (listState.firstVisibleItemIndex != 0) {
                 listState.scrollToItem(0)
             }
+        } else songListViewModel.onAction(
+            SongListActions.SearchingSong
+        )
+    }
+
+    LaunchedEffect(songListState.songSelected) {
+        songListState.songSelected?.let {
+            songListViewModel.onAction(
+                SongListActions.UpdateSongTitle(it.title)
+            )
+            songListViewModel.onAction(
+                SongListActions.UpdateSongArtist(it.artist)
+            )
         }
     }
 
@@ -118,49 +131,53 @@ fun SongListScreen(
             Column {
                 Text(
                     text = "Song list",
-                    fontSize = 20.sp,
+                    fontSize = 18.sp,
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 6.dp)
+                        .padding(vertical = 8.dp)
                 )
                 UnderlinedSearchTextField(
                     value = songListState.searchQuery,
-                    onValueChange = { songListViewModel.setSearchQuery(it) },
+                    onValueChange = {
+                        songListViewModel.onAction(
+                            SongListActions.UpdateSearchQuery(it)
+                        )
+                    },
                     placeholder = "Search songs...",
                     modifier = Modifier.fillMaxWidth(),
                     onImeAction = {
                         coroutineScope.launch {
                             listState.animateScrollToItem(
-                                index = queryIndexes.first()
+                                index = songListState.indexListSearching.first()
                             )
                             currentQueryIndex.value = 0
                         }
                     },
                     onUp = {
                         coroutineScope.launch {
-                            if (queryIndexes.isNotEmpty()) {
+                            if (songListState.indexListSearching.isNotEmpty()) {
                                 val prevIndex = if (currentQueryIndex.value > 0) {
                                     currentQueryIndex.value - 1
                                 } else {
-                                    queryIndexes.size - 1
+                                    songListState.indexListSearching.size - 1
                                 }
 
                                 currentQueryIndex.value = prevIndex
 
                                 listState.animateScrollToItem(
-                                    index = queryIndexes[prevIndex]
+                                    index = songListState.indexListSearching[prevIndex]
                                 )
                             }
                         }
                     },
                     onDown = {
                         coroutineScope.launch {
-                            if (queryIndexes.isNotEmpty()) {
+                            if (songListState.indexListSearching.isNotEmpty()) {
                                 val nextIndex =
-                                    if (currentQueryIndex.value < queryIndexes.size - 1) {
+                                    if (currentQueryIndex.value < songListState.indexListSearching.size - 1) {
                                         currentQueryIndex.value + 1
                                     } else {
                                         0
@@ -169,17 +186,19 @@ fun SongListScreen(
                                 currentQueryIndex.value = nextIndex
 
                                 listState.animateScrollToItem(
-                                    index = queryIndexes[nextIndex],
+                                    index = songListState.indexListSearching[nextIndex],
                                     scrollOffset = 0
                                 )
                             }
                         }
                     },
                     onClear = {
-                        songListViewModel.setSearchQuery("")
+                        songListViewModel.onAction(
+                            SongListActions.UpdateSearchQuery("")
+                        )
                         currentQueryIndex.value = -1
                     },
-                    result = queryIndexes.size,
+                    result = songListState.indexListSearching.size,
                     currentIndex = currentQueryIndex.value + 1
                 )
             }
@@ -187,9 +206,11 @@ fun SongListScreen(
     ) { paddingValues ->
         PullToRefreshBox(
             state = refreshState,
-            isRefreshing = songListState.isLoading,
+            isRefreshing = songListState.pullLoading,
             onRefresh = {
-                songListViewModel.pullToRefresh()
+                songListViewModel.onAction(
+                    SongListActions.PullToRefresh
+                )
             }
         ) {
             LazyColumn(
@@ -198,70 +219,125 @@ fun SongListScreen(
                     .fillMaxSize()
                     .padding(paddingValues)
             ) {
-                songListState.songList.forEach { (header, songs) ->
+                if (songListState.dataLoading) {
                     item {
-                        Text(
-                            text = header.toString(),
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(start = 10.dp, top = 7.dp, bottom = 3.dp)
-                        )
+                                .fillParentMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(50.dp)
+                            )
+                        }
                     }
-                    itemsIndexed(
-                        items = songs,
-                        key = { _, song -> song.id }
-                    ) { _, song ->
-                        SwipeAbleItemWithActions(
-                            isRevealed = songListState.revealedItemId == song.id,
-                            onExpanded = { songListViewModel.setRevealedItemId(song.id) },
-                            onCollapsed = {
-                                if (songListState.revealedItemId == song.id) {
-                                    songListViewModel.setRevealedItemId(null)
-                                }
-                            },
-                            actions = {
-                                ActionIcon(
-                                    onClick = {
-                                        songListViewModel.setSongStateForDelete(song)
-                                    },
-                                    backgroundColor = Color.Red,
-                                    icon = Icons.Default.Delete,
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .width(60.dp)
-                                )
-                                ActionIcon(
-                                    onClick = {
-                                        songListViewModel.setSongStateForUpdate(song)
-                                    },
-                                    backgroundColor = Color.Magenta,
-                                    icon = Icons.Default.Edit,
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .width(60.dp)
-                                )
-                                ActionIcon(
-                                    onClick = {
-                                        extendDialogVisible.value = true
-                                    },
-                                    backgroundColor = Color.LightGray,
-                                    icon = Icons.Default.MoreVert,
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .width(60.dp)
+                } else {
+                    if (songListState.songLists.isEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillParentMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "No songs available",
+                                    style = MaterialTheme.typography.titleMedium
                                 )
                             }
-                        ) {
-                            ListSongItem(
-                                song = song,
-                                onClick = {
-                                    if (songListState.revealedItemId != null) {
-                                        songListViewModel.setRevealedItemId(null)
+                        }
+                    } else {
+                        songListState.songLists.forEach { (header, songs) ->
+                            item {
+                                Text(
+                                    text = header.toString(),
+                                    fontSize = 20.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(start = 10.dp, top = 7.dp, bottom = 3.dp)
+                                )
+                            }
+                            itemsIndexed(
+                                items = songs,
+                                key = { _, song -> song.id }
+                            ) { _, song ->
+                                SwipeAbleItemWithActions(
+                                    isRevealed = songListState.revealedItemId == song.id,
+                                    onExpanded = {
+                                        songListViewModel.onAction(
+                                            SongListActions.UpdateRevealedItemId(song.id)
+                                        )
+                                    },
+                                    onCollapsed = {
+                                        if (songListState.revealedItemId == song.id) {
+                                            songListViewModel.onAction(
+                                                SongListActions.UpdateRevealedItemId(null)
+                                            )
+                                        }
+                                    },
+                                    actions = {
+                                        ActionIcon(
+                                            onClick = {
+                                                songListViewModel.onAction(
+                                                    SongListActions.UpdateIsDeleteDialog(true)
+                                                )
+                                                songListViewModel.onAction(
+                                                    SongListActions.UpdateSongSelected(song)
+                                                )
+                                            },
+                                            backgroundColor = Color.Red,
+                                            icon = Icons.Default.Delete,
+                                            modifier = Modifier
+                                                .fillMaxHeight()
+                                                .width(60.dp)
+                                        )
+                                        ActionIcon(
+                                            onClick = {
+                                                songListViewModel.onAction(
+                                                    SongListActions.UpdateIsUpdateDialog(true)
+                                                )
+                                                songListViewModel.onAction(
+                                                    SongListActions.UpdateSongSelected(song)
+                                                )
+                                            },
+                                            backgroundColor = Color.Magenta,
+                                            icon = Icons.Default.Edit,
+                                            modifier = Modifier
+                                                .fillMaxHeight()
+                                                .width(60.dp)
+                                        )
+                                        ActionIcon(
+                                            onClick = {
+                                                songListViewModel.onAction(
+                                                    SongListActions.UpdateIsExtraDialog(true)
+                                                )
+                                                songListViewModel.onAction(
+                                                    SongListActions.LoadPlaylists
+                                                )
+                                                songListViewModel.onAction(
+                                                    SongListActions.UpdateSongSelected(song)
+                                                )
+                                            },
+                                            backgroundColor = Color.LightGray,
+                                            icon = Icons.Default.MoreVert,
+                                            modifier = Modifier
+                                                .fillMaxHeight()
+                                                .width(60.dp)
+                                        )
                                     }
+                                ) {
+                                    ListSongItem(
+                                        song = song,
+                                        onClick = {
+                                            if (songListState.revealedItemId != null) {
+                                                songListViewModel.onAction(
+                                                    SongListActions.UpdateRevealedItemId(null)
+                                                )
+                                            }
+                                        }
+                                    )
                                 }
-                            )
+                            }
                         }
                     }
                 }
@@ -269,58 +345,83 @@ fun SongListScreen(
 
             HomeDialog(
                 isMultiButton = true,
-                onVisible = songListState.songStateForUpdate != null,
+                onVisible = songListState.isUpdateDialog,
                 onSubmit = {
-                    songListState.songStateForUpdate?.let {
-                        songListViewModel.updateSong(
-                            song = it,
-                            updateTitle = updateTitle.value,
-                            updateArtist = updateArtist.value
-                        )
-                    }
+                    songListViewModel.onAction(
+                        SongListActions.UpdateSong
+                    )
                 },
                 onDismiss = {
-                    songListViewModel.setSongStateForUpdate(null)
-                    songListViewModel.setRevealedItemId(null)
+                    songListViewModel.onAction(
+                        SongListActions.UpdateIsUpdateDialog(false)
+                    )
+                    songListViewModel.onAction(
+                        SongListActions.UpdateSongSelected(null)
+                    )
+                    songListViewModel.onAction(
+                        SongListActions.UpdateRevealedItemId(null)
+                    )
                 },
-                isEnabled = updateTitle.value.isNotBlank() && updateArtist.value.isNotBlank(),
+                isEnabled = songListState.songTitle.isNotBlank() && songListState.songArtist.isNotBlank(),
                 title = "Update"
             ) {
                 SongUpdateDialog(
-                    updateTitle = updateTitle,
-                    updateArtist = updateArtist
+                    title = songListState.songTitle,
+                    onChangeTitle = { title ->
+                        songListViewModel.onAction(
+                            SongListActions.UpdateSongTitle(title)
+                        )
+                    },
+                    artist = songListState.songArtist,
+                    onChangeArtist = { artist ->
+                        songListViewModel.onAction(
+                            SongListActions.UpdateSongArtist(artist)
+                        )
+                    }
                 )
             }
 
             HomeDialog(
                 isMultiButton = true,
-                onVisible = songListState.songStateForDelete != null,
+                onVisible = songListState.isDeleteDialog,
                 onSubmit = {
-                    songListState.songStateForDelete?.let {
-                        songListViewModel.deleteSong(
-                            song = it
-                        )
-                    }
+                    songListViewModel.onAction(
+                        SongListActions.DeleteSong
+                    )
                 },
                 onDismiss = {
-                    songListViewModel.setSongStateForDelete(null)
-                    songListViewModel.setRevealedItemId(null)
+                    songListViewModel.onAction(
+                        SongListActions.UpdateIsDeleteDialog(false)
+                    )
+                    songListViewModel.onAction(
+                        SongListActions.UpdateSongSelected(null)
+                    )
+                    songListViewModel.onAction(
+                        SongListActions.UpdateRevealedItemId(null)
+                    )
                 },
                 title = "Delete",
                 buttonBackgroundColor = Color.Red
             ) {
                 SongDeleteDialog(
-                    deleteTitle = songListState.songStateForDelete?.title ?: ""
+                    deleteTitle = songListState.songSelected?.title ?: ""
                 )
             }
 
             HomeDialog(
                 isMultiButton = false,
-                onVisible = extendDialogVisible.value,
+                onVisible = songListState.isExtraDialog,
                 onSubmit = {},
                 onDismiss = {
-                    extendDialogVisible.value = false
-                    songListViewModel.setRevealedItemId(null)
+                    songListViewModel.onAction(
+                        SongListActions.UpdateIsExtraDialog(false)
+                    )
+                    songListViewModel.onAction(
+                        SongListActions.UpdateSongSelected(null)
+                    )
+                    songListViewModel.onAction(
+                        SongListActions.UpdateRevealedItemId(null)
+                    )
                 }
             ) {
                 SongExtendDialog(
@@ -331,10 +432,14 @@ fun SongListScreen(
 
                     },
                     onDetail = {
-                        songListViewModel.setSongStateForDetail(songListState.revealedItemId)
+                        songListViewModel.onAction(
+                            SongListActions.UpdateIsDetailDialog(true)
+                        )
                     },
                     onAddToPlaylist = {
-
+                        songListViewModel.onAction(
+                            SongListActions.UpdateIsPlaylistDialog(true)
+                        )
                     },
                     onAddToWaitingList = {
 
@@ -344,17 +449,37 @@ fun SongListScreen(
 
             HomeDialog(
                 isMultiButton = false,
-                onVisible = songListState.songStateForDetail != null,
+                onVisible = songListState.isDetailDialog,
                 onSubmit = {},
                 onDismiss = {
-                    songListViewModel.setSongStateForDetail(null)
+                    songListViewModel.onAction(
+                        SongListActions.UpdateIsDetailDialog(false)
+                    )
                 }
             ) {
-                songListState.songStateForDetail?.let {
+                songListState.songSelected?.let {
                     SongDetailDialog(
                         song = it
                     )
                 }
+            }
+
+            HomeDialog(
+                isMultiButton = false,
+                onVisible = songListState.isPlaylistDialog,
+                onSubmit = {},
+                onDismiss = {
+                    songListViewModel.onAction(
+                        SongListActions.UpdateIsPlaylistDialog(false)
+                    )
+                }
+            ) {
+                PlaylistDialog(
+                    playlistList = songListState.playlist,
+                    onAddToPlaylist = { playlistId ->
+                        songListViewModel.addSongToPlaylist(playlistId)
+                    }
+                )
             }
         }
     }
@@ -566,8 +691,10 @@ private fun SongDeleteDialog(
 
 @Composable
 private fun SongUpdateDialog(
-    updateTitle: MutableState<String>,
-    updateArtist: MutableState<String>,
+    title: String,
+    onChangeTitle: (String) -> Unit,
+    artist: String,
+    onChangeArtist: (String) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -580,8 +707,8 @@ private fun SongUpdateDialog(
             modifier = Modifier.padding(bottom = 8.dp)
         )
         OutlinedTextFiled(
-            value = updateTitle.value,
-            onValueChange = { updateTitle.value = it }
+            value = title,
+            onValueChange = { onChangeTitle(it) }
         )
         Text(
             text = "Artist:",
@@ -591,8 +718,8 @@ private fun SongUpdateDialog(
                 .padding(bottom = 8.dp)
         )
         OutlinedTextFiled(
-            value = updateArtist.value,
-            onValueChange = { updateArtist.value = it }
+            value = artist,
+            onValueChange = { onChangeArtist(it) }
         )
     }
 }
@@ -719,4 +846,75 @@ private fun TextDetail(
         fontSize = 17.sp,
         modifier = Modifier.padding(bottom = 8.dp),
     )
+}
+
+@Composable
+private fun PlaylistDialog(
+    playlistList: List<Playlist>,
+    onAddToPlaylist: (playlistId: Long) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(260.dp)
+            .padding(16.dp)
+    ) {
+        if (playlistList.isNotEmpty()) {
+            TextDetail(
+                title = "All playlist",
+                detail = ""
+            )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxWidth()
+            ) {
+                itemsIndexed(
+                    items = playlistList,
+                    key = { _, playlist -> playlist.id }
+                ) { _, playlist ->
+                    PlaylistItem(
+                        playlist = playlist,
+                        onClick = { onAddToPlaylist(playlist.id) }
+                    )
+                }
+            }
+        } else TextDetail(
+            title = "Playlist",
+            detail = "There are currently no playlists available."
+        )
+    }
+}
+
+@Composable
+private fun PlaylistItem(
+    playlist: Playlist,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable {
+                onClick()
+            }
+            .drawBehind {
+                val strokeWidth = 0.5.dp.toPx()
+                val color = Color.Gray
+                drawLine(
+                    color = color,
+                    start = Offset(0f, size.height),
+                    end = Offset(size.width, size.height),
+                    strokeWidth = strokeWidth
+                )
+            }
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = playlist.name,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }

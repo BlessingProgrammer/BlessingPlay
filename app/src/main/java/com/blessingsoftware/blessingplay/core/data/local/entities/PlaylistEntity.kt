@@ -1,4 +1,4 @@
-package com.blessingsoftware.blessingplay.core.data.local
+package com.blessingsoftware.blessingplay.core.data.local.entities
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -9,5 +9,5 @@ data class PlaylistEntity(
     val id: Long? = null,
 
     var name: String,
-    var thumbnail: String?
+    var thumbnail: String
 )

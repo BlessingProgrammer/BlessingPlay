@@ -1,12 +1,12 @@
-package com.blessingsoftware.blessingplay.home.screens.playlist.domain.use_case
+package com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case
 
 import com.blessingsoftware.blessingplay.core.domain.model.Playlist
 import com.blessingsoftware.blessingplay.core.domain.repository.PlaylistRepository
 
-class InsertPlaylist(
+class GetAllPlaylists(
     private val playlistRepository: PlaylistRepository
 ) {
-    suspend operator fun invoke(playlist: Playlist) {
-        playlistRepository.insertPlaylist(playlist)
+    suspend operator fun invoke(): List<Playlist> {
+        return playlistRepository.getAllPlaylists()
     }
 }
