@@ -156,7 +156,7 @@ class SongListViewModel @Inject constructor(
                     if (normalizedChar in 'A'..'Z') normalizedChar else '#'
                 })
         }
-        delay(1500)
+        delay(1000)
         onAction(SongListActions.UpdateDataLoading(false))
     }
 

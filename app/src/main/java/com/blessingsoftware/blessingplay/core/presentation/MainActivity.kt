@@ -1,12 +1,8 @@
 package com.blessingsoftware.blessingplay.core.presentation
 
 import android.Manifest
-import android.content.Intent
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-import android.os.Environment
-import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -32,17 +28,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import androidx.navigation.navArgument
 import androidx.navigation.toRoute
 import com.blessingsoftware.blessingplay.core.presentation.ui.theme.BlessingPlayTheme
 import com.blessingsoftware.blessingplay.home.presentation.HomeScreen
 import com.blessingsoftware.blessingplay.playlist_songs.presentation.PlaylistSongsScreen
-import com.blessingsoftware.blessingplay.playlist_songs.presentation.PlaylistSongsViewModel
 import com.blessingsoftware.blessingplay.splash.presentation.SplashScreen
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
@@ -98,7 +90,8 @@ class MainActivity : ComponentActivity() {
                 PlaylistSongsScreen(
                     navController = navController,
                     playlistId = args.playlistId,
-                    name = args.name
+                    name = args.name,
+                    thumbnail = args.thumbnail
                 )
             }
         }

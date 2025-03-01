@@ -259,7 +259,8 @@ fun PlaylistScreen(
                                             navController.navigate(
                                                 Screen.PlaylistSongsScreen(
                                                     playlistId = playlist.id,
-                                                    name = playlist.name
+                                                    name = playlist.name,
+                                                    thumbnail = playlist.thumbnail
                                                 )
                                             )
                                         }

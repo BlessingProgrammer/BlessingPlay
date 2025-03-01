@@ -126,7 +126,7 @@ class PlaylistViewModel @Inject constructor(
         _playlistState.update {
             it.copy(playlists = getAllPlaylistsWithSongCount.invoke())
         }
-        delay(1500)
+        delay(1000)
         onAction(PlaylistActions.UpdateDataLoading(false))
     }
 

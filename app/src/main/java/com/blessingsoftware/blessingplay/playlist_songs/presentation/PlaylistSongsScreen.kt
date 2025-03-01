@@ -19,11 +19,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -36,8 +36,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -57,7 +55,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import com.blessingsoftware.blessingplay.home.presentation.component.HomeDialog
-import com.blessingsoftware.blessingplay.home.screens.playlist.presentation.PlaylistActions
 import kotlinx.coroutines.flow.collectLatest
 import kotlin.math.roundToInt
 
@@ -66,7 +63,8 @@ fun PlaylistSongsScreen(
     playlistSongsViewModel: PlaylistSongsViewModel = hiltViewModel(),
     navController: NavController,
     playlistId: Long,
-    name: String
+    name: String,
+    thumbnail: String?
 ) {
     val playlistSongsState by playlistSongsViewModel.playlistSongsState.collectAsState()
 
@@ -116,101 +114,99 @@ fun PlaylistSongsScreen(
             }
         }
     ) { paddingValues ->
+
         LazyColumn(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            if (playlistSongsState.dataLoading) {
+            if (playlistSongsState.songWithPositionLists.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier
                             .fillParentMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(50.dp)
+                        Text(
+                            text = "No songs available",
+                            style = MaterialTheme.typography.titleMedium
                         )
                     }
                 }
             } else {
-                if (playlistSongsState.songWithPositionLists.isEmpty()) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillParentMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = "No songs available",
-                                style = MaterialTheme.typography.titleMedium
+                item {
+                    AsyncImage(
+                        model = thumbnail?.ifBlank { R.drawable.music },
+                        contentDescription = playlistId.toString(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(220.dp)
+                            .clip(RoundedCornerShape(16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                itemsIndexed(
+                    items = playlistSongsState.songWithPositionLists,
+                    key = { _, song -> song.id }
+                ) { index, song ->
+                    SwipeAbleItemWithActions(
+                        isRevealed = playlistSongsState.revealedItemId == song.id,
+                        onExpanded = {
+                            playlistSongsViewModel.onAction(
+                                PlaylistSongsActions.UpdateRevealedItemId(song.id)
+                            )
+                        },
+                        onCollapsed = {
+                            if (playlistSongsState.revealedItemId == song.id) {
+                                playlistSongsViewModel.onAction(
+                                    PlaylistSongsActions.UpdateRevealedItemId(null)
+                                )
+                            }
+                        },
+                        actions = {
+                            ActionIcon(
+                                onClick = {
+                                    playlistSongsViewModel.onAction(
+                                        PlaylistSongsActions.UpdateIsDeleteDialog(true)
+                                    )
+                                    playlistSongsViewModel.onAction(
+                                        PlaylistSongsActions.UpdateSongSelected(song)
+                                    )
+                                },
+                                backgroundColor = Color.Red,
+                                icon = Icons.Default.Delete,
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .width(60.dp)
+                            )
+                            ActionIcon(
+                                onClick = {
+                                    navController.navigate(Screen.Home)
+                                },
+                                backgroundColor = Color.LightGray,
+                                icon = Icons.Default.PlayArrow,
+                                modifier = Modifier
+                                    .fillMaxHeight()
+                                    .width(60.dp)
                             )
                         }
-                    }
-                } else {
-                    itemsIndexed(
-                        items = playlistSongsState.songWithPositionLists,
-                        key = { _, song -> song.id }
-                    ) { index, song ->
-                        SwipeAbleItemWithActions(
-                            isRevealed = playlistSongsState.revealedItemId == song.id,
-                            onExpanded = {
-                                playlistSongsViewModel.onAction(
-                                    PlaylistSongsActions.UpdateRevealedItemId(song.id)
-                                )
-                            },
-                            onCollapsed = {
-                                if (playlistSongsState.revealedItemId == song.id) {
+                    ) {
+                        ListSongWithPositionItem(
+                            index = index,
+                            song = song,
+                            onClick = {
+                                if (playlistSongsState.revealedItemId != null) {
                                     playlistSongsViewModel.onAction(
                                         PlaylistSongsActions.UpdateRevealedItemId(null)
                                     )
+                                } else {
+
                                 }
                             },
-                            actions = {
-                                ActionIcon(
-                                    onClick = {
-                                        playlistSongsViewModel.onAction(
-                                            PlaylistSongsActions.UpdateIsDeleteDialog(true)
-                                        )
-                                        playlistSongsViewModel.onAction(
-                                            PlaylistSongsActions.UpdateSongSelected(song)
-                                        )
-                                    },
-                                    backgroundColor = Color.Red,
-                                    icon = Icons.Default.Delete,
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .width(60.dp)
-                                )
-                                ActionIcon(
-                                    onClick = {
-                                        navController.navigate(Screen.Home)
-                                    },
-                                    backgroundColor = Color.LightGray,
-                                    icon = Icons.Default.PlayArrow,
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .width(60.dp)
-                                )
-                            }
-                        ) {
-                            ListSongWithPositionItem(
-                                index = index,
-                                song = song,
-                                onClick = {
-                                    if (playlistSongsState.revealedItemId != null) {
-                                        playlistSongsViewModel.onAction(
-                                            PlaylistSongsActions.UpdateRevealedItemId(null)
-                                        )
-                                    } else {
-
-                                    }
-                                },
-                                playlistSongsViewModel = playlistSongsViewModel,
-                                playlistId = playlistId
-                            )
-                        }
+                            playlistSongsViewModel = playlistSongsViewModel,
+                            playlistId = playlistId
+                        )
                     }
                 }
             }
@@ -318,22 +314,6 @@ private fun ListSongWithPositionItem(
             Column(
                 modifier = Modifier
                     .weight(1f)
-                    .drawBehind {
-                        val strokeWidth = 0.5.dp.toPx()
-                        val color = Color.Gray
-                        drawLine(
-                            color = color,
-                            start = Offset(0f, 0f),
-                            end = Offset(size.width, 0f),
-                            strokeWidth = strokeWidth
-                        )
-                        drawLine(
-                            color = color,
-                            start = Offset(0f, size.height),
-                            end = Offset(size.width, size.height),
-                            strokeWidth = strokeWidth
-                        )
-                    }
                     .padding(vertical = 5.dp),
                 verticalArrangement = Arrangement.Center
             ) {

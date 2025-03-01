@@ -12,6 +12,7 @@ sealed interface Screen {
     @Serializable
     data class PlaylistSongsScreen(
         val playlistId: Long,
-        val name: String
+        val name: String,
+        val thumbnail : String?
     ) : Screen
 }
