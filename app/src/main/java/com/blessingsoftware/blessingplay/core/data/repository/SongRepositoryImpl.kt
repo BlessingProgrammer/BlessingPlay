@@ -13,6 +13,7 @@ import com.blessingsoftware.blessingplay.core.data.mapper.toSongEntityForUpdate
 import com.blessingsoftware.blessingplay.core.data.mapper.toSongRemovedEntity
 import com.blessingsoftware.blessingplay.core.domain.model.Song
 import com.blessingsoftware.blessingplay.core.domain.repository.SongRepository
+import com.blessingsoftware.blessingplay.core.presentation.utils.normalizeFirstChar
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -25,7 +26,13 @@ class SongRepositoryImpl(
     private val songRemovedDao = appDb.songRemovedDao
 
     override suspend fun loadMediaFileAndSaveToDb(): Unit = withContext(Dispatchers.IO) {
-        val songEntityList = getMediaFile();
+        val grouped = getMediaFile()
+            .sortedBy { it.title.trim() }
+            .groupBy { song ->
+                val normalizedChar = normalizeFirstChar(song.title.trim().firstOrNull())
+                if (normalizedChar in 'A'..'Z') normalizedChar else '#'
+            }
+        val songEntityList = grouped.values.flatten()
         songDao.firstInsertSongEntities(songEntityList)
     }
 

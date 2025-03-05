@@ -137,7 +137,7 @@ fun PlaylistSongsScreen(
             } else {
                 item {
                     AsyncImage(
-                        model = thumbnail?.ifBlank { R.drawable.music },
+                        model = thumbnail?.ifBlank { R.drawable.vinyl },
                         contentDescription = playlistId.toString(),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -145,6 +145,7 @@ fun PlaylistSongsScreen(
                             .clip(RoundedCornerShape(16.dp)),
                         contentScale = ContentScale.Crop
                     )
+                    Spacer(modifier = Modifier.height(5.dp))
                 }
                 itemsIndexed(
                     items = playlistSongsState.songWithPositionLists,
@@ -182,7 +183,14 @@ fun PlaylistSongsScreen(
                             )
                             ActionIcon(
                                 onClick = {
-                                    navController.navigate(Screen.Home)
+                                    playlistSongsViewModel.playPlaylist(song, playlistId)
+                                    navController.navigate(Screen.Home) {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 },
                                 backgroundColor = Color.LightGray,
                                 icon = Icons.Default.PlayArrow,
@@ -201,7 +209,14 @@ fun PlaylistSongsScreen(
                                         PlaylistSongsActions.UpdateRevealedItemId(null)
                                     )
                                 } else {
-
+                                    playlistSongsViewModel.playPlaylist(song, playlistId)
+                                    navController.navigate(Screen.Home) {
+                                        popUpTo(navController.graph.startDestinationId) {
+                                            saveState = true
+                                        }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
                                 }
                             },
                             playlistSongsViewModel = playlistSongsViewModel,
@@ -301,7 +316,7 @@ private fun ListSongWithPositionItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = song.albumArt ?: R.drawable.music,
+                model = song.albumArt ?: R.drawable.vinyl,
                 contentDescription = song.artistId.toString(),
                 modifier = Modifier
                     .size(55.dp)

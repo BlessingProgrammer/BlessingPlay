@@ -39,11 +39,9 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -66,6 +64,7 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import com.blessingsoftware.blessingplay.R
 import com.blessingsoftware.blessingplay.core.domain.model.Playlist
@@ -73,6 +72,7 @@ import com.blessingsoftware.blessingplay.core.domain.model.Song
 import com.blessingsoftware.blessingplay.core.presentation.utils.formatDateModified
 import com.blessingsoftware.blessingplay.core.presentation.utils.formatDuration
 import com.blessingsoftware.blessingplay.core.presentation.utils.formatSize
+import com.blessingsoftware.blessingplay.home.presentation.BottomNavScreen
 import com.blessingsoftware.blessingplay.home.presentation.component.ActionIcon
 import com.blessingsoftware.blessingplay.home.presentation.component.HomeDialog
 import com.blessingsoftware.blessingplay.home.presentation.component.OutlinedTextFiled
@@ -82,7 +82,8 @@ import kotlinx.coroutines.launch
 @ExperimentalMaterial3Api
 @Composable
 fun SongListScreen(
-    songListViewModel: SongListViewModel = hiltViewModel()
+    songListViewModel: SongListViewModel = hiltViewModel(),
+    bottomNavController: NavController
 ) {
     val songListState by songListViewModel.songListState.collectAsState()
 
@@ -333,6 +334,15 @@ fun SongListScreen(
                                                 songListViewModel.onAction(
                                                     SongListActions.UpdateRevealedItemId(null)
                                                 )
+                                            } else {
+                                                songListViewModel.playSong(song)
+                                                bottomNavController.navigate(BottomNavScreen.MusicPlayer) {
+                                                    popUpTo(bottomNavController.graph.startDestinationId) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
                                             }
                                         }
                                     )
@@ -426,7 +436,16 @@ fun SongListScreen(
             ) {
                 SongExtendDialog(
                     onPlay = {
-
+                        songListState.songSelected?.let {
+                            songListViewModel.playSong(it)
+                            bottomNavController.navigate(BottomNavScreen.MusicPlayer) {
+                                popUpTo(bottomNavController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     },
                     onNextPlay = {
 
@@ -499,7 +518,7 @@ private fun ListSongItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = song.albumArt ?: R.drawable.music,
+            model = song.albumArt ?: R.drawable.vinyl,
             contentDescription = song.artistId.toString(),
             modifier = Modifier
                 .size(55.dp)

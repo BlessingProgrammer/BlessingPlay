@@ -1,8 +1,11 @@
 package com.blessingsoftware.blessingplay.home.screens.song_list.presentation
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.blessingsoftware.blessingplay.core.data.repository.MusicPlayerRepositoryImpl
 import com.blessingsoftware.blessingplay.core.domain.model.Song
+import com.blessingsoftware.blessingplay.core.presentation.utils.PreferencesManager
 import com.blessingsoftware.blessingplay.core.presentation.utils.normalizeFirstChar
 import com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case.AddSongToPlaylist
 import com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case.DeleteSong
@@ -11,6 +14,7 @@ import com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case.
 import com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case.InsertSongs
 import com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case.UpdateSong
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,11 +29,14 @@ class SongListViewModel @Inject constructor(
     private val insertSongs: InsertSongs,
     private val updateSong: UpdateSong,
     private val deleteSong: DeleteSong,
-    private val addSongToPlaylist: AddSongToPlaylist
+    private val addSongToPlaylist: AddSongToPlaylist,
+    private val musicPlayerRepository: MusicPlayerRepositoryImpl,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
-
     private val _songListState = MutableStateFlow(SongListState())
     val songListState = _songListState.asStateFlow()
+
+    private val preferencesManager = PreferencesManager(context)
 
     init {
         onAction(SongListActions.LoadSongs)
@@ -259,6 +266,22 @@ class SongListViewModel @Inject constructor(
             if (result == true) {
                 onAction(SongListActions.UpdateIsPlaylistDialog(false))
             }
+        }
+    }
+
+    fun playSong(song: Song) {
+        viewModelScope.launch {
+            val list: List<Song> = _songListState.value.songLists.values.flatten()
+            musicPlayerRepository.setMusicList(list)
+            musicPlayerRepository.setCurrentSong(song)
+            preferencesManager.savePlaybackSettings(
+                playlistType = false,
+                playlistId = null,
+                lastSongId = song.id
+            )
+            onAction(SongListActions.UpdateRevealedItemId(null))
+            onAction(SongListActions.UpdateIsExtraDialog(false))
+            onAction(SongListActions.UpdateSongSelected(null))
         }
     }
 

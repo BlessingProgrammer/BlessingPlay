@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.room.Room
 import com.blessingsoftware.blessingplay.R
 import com.blessingsoftware.blessingplay.core.data.local.AppDb
+import com.blessingsoftware.blessingplay.core.data.repository.MusicPlayerRepositoryImpl
 import com.blessingsoftware.blessingplay.core.data.repository.PlaylistRepositoryImpl
 import com.blessingsoftware.blessingplay.core.data.repository.PlaylistSongCrossRefRepositoryImpl
 import com.blessingsoftware.blessingplay.core.data.repository.SongRepositoryImpl
@@ -44,6 +45,14 @@ object AppModule {
             AppDb::class.java,
             application.getString(R.string.db_name)
         ).build()
+    }
+
+    @Provides
+    @Singleton
+    fun provideMusicPlayerRepository(
+        @ApplicationContext context: Context
+    ): MusicPlayerRepositoryImpl {
+        return MusicPlayerRepositoryImpl(context)
     }
 
     @Provides

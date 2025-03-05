@@ -13,6 +13,9 @@ interface SongDao {
     @Query("SELECT * FROM songEntity")
     suspend fun getAllSongEntities(): List<SongEntity>
 
+    @Query("SELECT * FROM songEntity WHERE id = :songId")
+    suspend fun getSongEntityBySongId(songId: Long) : SongEntity
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun firstInsertSongEntities(songEntities: List<SongEntity>)
 

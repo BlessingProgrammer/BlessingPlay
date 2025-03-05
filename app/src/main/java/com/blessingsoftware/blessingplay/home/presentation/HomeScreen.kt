@@ -101,8 +101,15 @@ fun HomeScreen(navController: NavController) {
                     startDestination = BottomNavScreen.MusicPlayer,
                     modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding())
                 ) {
-                    composable<BottomNavScreen.SongList> { SongListScreen() }
-                    composable<BottomNavScreen.Playlist> { PlaylistScreen(navController = navController) }
+                    composable<BottomNavScreen.SongList> {
+                        SongListScreen(bottomNavController = bottomNavController)
+                    }
+                    composable<BottomNavScreen.Playlist> {
+                        PlaylistScreen(
+                            navController = navController,
+                            bottomNavController = bottomNavController
+                        )
+                    }
                     composable<BottomNavScreen.MusicPlayer> { MusicPlayerScreen() }
                     composable<BottomNavScreen.Album> { SettingScreen() }
                     composable<BottomNavScreen.Setting> { SettingScreen() }
@@ -124,7 +131,7 @@ fun BottomNavigationBar(
         bottomNavItems.forEach { item ->
             if (item.screen == BottomNavScreen.MusicPlayer) {
                 Image(
-                    painter = painterResource(id = R.drawable.music),
+                    painter = painterResource(id = R.drawable.vinyl),
                     contentDescription = "Music player button",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -134,7 +141,7 @@ fun BottomNavigationBar(
                         .clickable {
                             bottomNavController.navigate(item.screen) {
                                 popUpTo(bottomNavController.graph.startDestinationId) {
-                                    saveState = true
+                                    saveState = false
                                 }
                                 launchSingleTop = true
                                 restoreState = true

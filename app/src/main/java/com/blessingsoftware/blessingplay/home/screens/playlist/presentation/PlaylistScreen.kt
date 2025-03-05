@@ -58,6 +58,7 @@ import coil3.compose.AsyncImage
 import com.blessingsoftware.blessingplay.R
 import com.blessingsoftware.blessingplay.core.domain.model.Playlist
 import com.blessingsoftware.blessingplay.core.presentation.Screen
+import com.blessingsoftware.blessingplay.home.presentation.BottomNavScreen
 import com.blessingsoftware.blessingplay.home.presentation.component.ActionIcon
 import com.blessingsoftware.blessingplay.home.presentation.component.HomeDialog
 import com.blessingsoftware.blessingplay.home.presentation.component.OutlinedTextFiled
@@ -68,7 +69,8 @@ import kotlinx.coroutines.flow.collectLatest
 @Composable
 fun PlaylistScreen(
     playlistViewModel: PlaylistViewModel = hiltViewModel(),
-    navController: NavController
+    navController: NavController,
+    bottomNavController: NavController
 ) {
     val playlistState by playlistViewModel.playlistState.collectAsState()
 
@@ -208,7 +210,16 @@ fun PlaylistScreen(
                                 actions = {
                                     ActionIcon(
                                         onClick = {
-
+                                            if (playlist.songCount > 0) {
+                                                playlistViewModel.playPlaylist(playlist.id)
+                                                bottomNavController.navigate(BottomNavScreen.MusicPlayer) {
+                                                    popUpTo(bottomNavController.graph.startDestinationId) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
+                                            }
                                         },
                                         backgroundColor = Color.LightGray,
                                         icon = Icons.Default.PlayArrow,
@@ -262,7 +273,13 @@ fun PlaylistScreen(
                                                     name = playlist.name,
                                                     thumbnail = playlist.thumbnail
                                                 )
-                                            )
+                                            ){
+                                                popUpTo(navController.graph.startDestinationId) {
+                                                    saveState = true
+                                                }
+                                                launchSingleTop = true
+                                                restoreState = true
+                                            }
                                         }
                                     }
                                 )
@@ -390,7 +407,7 @@ private fun PlaylistItem(
         verticalAlignment = Alignment.CenterVertically
     ) {
         AsyncImage(
-            model = playlist.thumbnail.ifBlank { R.drawable.music },
+            model = playlist.thumbnail.ifBlank { R.drawable.vinyl },
             contentDescription = playlist.id.toString(),
             modifier = Modifier
                 .size(55.dp)

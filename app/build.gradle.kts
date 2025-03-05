@@ -140,4 +140,10 @@ dependencies {
 
     // Material Icons Extends
     implementation("androidx.compose.material:material-icons-extended:1.7.8")
+
+    // Media style
+    implementation("androidx.media:media:1.7.0")
+
+    // Datastore
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
 }
