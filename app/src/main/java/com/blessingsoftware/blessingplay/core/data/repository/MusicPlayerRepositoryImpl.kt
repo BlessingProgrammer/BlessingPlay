@@ -7,7 +7,6 @@ import android.content.ServiceConnection
 import android.os.IBinder
 import android.util.Log
 import com.blessingsoftware.blessingplay.core.domain.model.Song
-import com.blessingsoftware.blessingplay.core.presentation.utils.RepeatModeOption
 import com.blessingsoftware.blessingplay.core.service.MusicPlayerService
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
@@ -36,8 +35,11 @@ class MusicPlayerRepositoryImpl @Inject constructor(
     private val _currentDuration = MutableStateFlow(0f)
     val currentDuration: StateFlow<Float> = _currentDuration
 
-    private val _currentRepeatOption = MutableStateFlow<RepeatModeOption>(RepeatModeOption.OFF)
-    val currentRepeatOption: StateFlow<RepeatModeOption> = _currentRepeatOption
+    private val _currentRepeatOption = MutableStateFlow(false)
+    val currentRepeatOption: StateFlow<Boolean> = _currentRepeatOption
+
+    private val _currentShuffleStatus = MutableStateFlow(false)
+    val currentShuffleStatus: StateFlow<Boolean> = _currentShuffleStatus
 
     private val _isBoundFlow = MutableStateFlow(false)
     val isBoundFlow: StateFlow<Boolean> = _isBoundFlow
@@ -70,6 +72,10 @@ class MusicPlayerRepositoryImpl @Inject constructor(
 
             binder.getCurrentRepeatOption().onEach { option ->
                 _currentRepeatOption.update { option }
+            }.launchIn(CoroutineScope(Dispatchers.Main))
+
+            binder.getCurrentShuffleStatus().onEach { status ->
+                _currentShuffleStatus.update { status }
             }.launchIn(CoroutineScope(Dispatchers.Main))
         }
 
@@ -117,8 +123,12 @@ class MusicPlayerRepositoryImpl @Inject constructor(
         musicPlayerService?.seekTo(sliderPosition)
     }
 
-    fun setRepeatModeOption(option: RepeatModeOption) {
+    fun setRepeatModeOption(option: Boolean) {
         musicPlayerService?.setRepeatModeOption(option)
+    }
+
+    fun setShuffleStatus(status: Boolean) {
+        musicPlayerService?.setShuffleMode(status)
     }
 
     fun getCurrentSong(): Song? {

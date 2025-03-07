@@ -5,6 +5,7 @@ import android.content.Context
 import androidx.room.Room
 import com.blessingsoftware.blessingplay.R
 import com.blessingsoftware.blessingplay.core.data.local.AppDb
+import com.blessingsoftware.blessingplay.core.data.remote.api.MoreSongApi
 import com.blessingsoftware.blessingplay.core.data.repository.MusicPlayerRepositoryImpl
 import com.blessingsoftware.blessingplay.core.data.repository.PlaylistRepositoryImpl
 import com.blessingsoftware.blessingplay.core.data.repository.PlaylistSongCrossRefRepositoryImpl
@@ -31,6 +32,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -190,5 +193,15 @@ object AppModule {
         playlistSongCrossRefRepository: PlaylistSongCrossRefRepository
     ): DeleteSongFromPlaylist {
         return DeleteSongFromPlaylist(playlistSongCrossRefRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMoreSongApi() : MoreSongApi{
+        return Retrofit.Builder()
+            .addConverterFactory(GsonConverterFactory.create())
+            .baseUrl(BuildConfig.API_BASE_URL)
+            .build()
+            .create(MoreSongApi::class.java)
     }
 }

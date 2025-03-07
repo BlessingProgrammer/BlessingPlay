@@ -133,7 +133,9 @@ class PlaylistSongsViewModel @Inject constructor(
             preferencesManager.savePlaybackSettings(
                 playlistType = true,
                 playlistId = playlistId,
-                lastSongId = song.id
+                lastSongId = song.id,
+                currentRepeatMode = false,
+                currentShuffleStatus = false
             )
         }
     }

@@ -33,7 +33,6 @@ import com.blessingsoftware.blessingplay.core.data.mapper.listSongEntityToListSo
 import com.blessingsoftware.blessingplay.core.data.mapper.listSongEntityWithPositionToListSong
 import com.blessingsoftware.blessingplay.core.data.mapper.toSong
 import com.blessingsoftware.blessingplay.core.presentation.utils.PreferencesManager
-import com.blessingsoftware.blessingplay.core.presentation.utils.RepeatModeOption
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
@@ -47,6 +46,11 @@ const val PLAY_PAUSE = "play_pause"
 @AndroidEntryPoint
 class MusicPlayerService : Service() {
 
+    companion object {
+        @Volatile
+        var isServiceRunning = false
+    }
+
     @Inject
     lateinit var appDb: AppDb
 
@@ -59,7 +63,8 @@ class MusicPlayerService : Service() {
     private val maxDuration = MutableStateFlow(0f)
     private val currentDuration = MutableStateFlow(0f)
 
-    private val currentRepeatOption = MutableStateFlow<RepeatModeOption>(RepeatModeOption.OFF)
+    private val currentRepeatOption = MutableStateFlow(false)
+    private val currentShuffleStatus = MutableStateFlow(false)
 
     private val scope = CoroutineScope(Dispatchers.Main)
 
@@ -79,6 +84,8 @@ class MusicPlayerService : Service() {
         fun getCurrentDuration() = currentDuration
 
         fun getCurrentRepeatOption() = currentRepeatOption
+
+        fun getCurrentShuffleStatus() = currentShuffleStatus
     }
 
     override fun onBind(intent: Intent?): IBinder? {
@@ -91,6 +98,19 @@ class MusicPlayerService : Service() {
         exoPlayer = ExoPlayer.Builder(applicationContext).build()
         preferencesManager = PreferencesManager(applicationContext)
         loadPlaylistSettings()
+
+        exoPlayer.addListener(object : Player.Listener {
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                mediaItem?.localConfiguration?.tag?.let { tag ->
+                    val song = songList.value.find { it.id == tag }
+                    if (song != null) {
+                        currentSong.update { song }
+                        maxDuration.update { song.duration.toFloat() }
+                        isPlaying.update { true }
+                    }
+                }
+            }
+        })
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -132,7 +152,16 @@ class MusicPlayerService : Service() {
                 val song = appDb.songDao.getSongEntityBySongId(settings.lastSongId)
                 currentSong.update { song.toSong() }
             }
+
+            currentRepeatOption.update { settings.currentRepeatMode }
+            currentShuffleStatus.update { settings.currentShuffleStatus }
+
             withContext(Dispatchers.Main) {
+                when (settings.currentRepeatMode) {
+                    true -> exoPlayer.repeatMode = Player.REPEAT_MODE_ONE
+                    false -> exoPlayer.repeatMode = Player.REPEAT_MODE_OFF
+                }
+                exoPlayer.shuffleModeEnabled = settings.currentShuffleStatus
                 start()
             }
         }
@@ -145,7 +174,9 @@ class MusicPlayerService : Service() {
                 preferencesManager.savePlaybackSettings(
                     playlistType = currentSettings.playlistType,
                     playlistId = currentSettings.playlistId,
-                    lastSongId = song.id
+                    lastSongId = song.id,
+                    currentRepeatMode = currentSettings.currentRepeatMode,
+                    currentShuffleStatus = currentSettings.currentShuffleStatus
                 )
             }
         }
@@ -163,18 +194,16 @@ class MusicPlayerService : Service() {
     fun prev() {
         job?.cancel()
 
-        exoPlayer.stop()
-        val index = songList.value.indexOf(currentSong.value)
-        val prevIndex = if (index == 0) songList.value.size.minus(1) else index.minus(1)
-        val prevItem = songList.value.get(prevIndex)
-
-        currentSong.update { prevItem }
-        val mediaItem = MediaItem.fromUri(Uri.parse(prevItem.path))
-        exoPlayer.setMediaItem(mediaItem)
-
-        exoPlayer.prepare()
-        exoPlayer.play()
-        isPlaying.update { true }
+        if (exoPlayer.hasPreviousMediaItem()) {
+            exoPlayer.seekToPreviousMediaItem()
+            exoPlayer.play()
+        } else {
+            val lastIndex = exoPlayer.mediaItemCount - 1
+            if (lastIndex >= 0) {
+                exoPlayer.seekTo(lastIndex, 0)
+                exoPlayer.play()
+            }
+        }
 
         currentSong.value?.let { createNotification(it) }
         updateDurations()
@@ -195,18 +224,13 @@ class MusicPlayerService : Service() {
     fun next() {
         job?.cancel()
 
-        exoPlayer.stop()
-        val index = songList.value.indexOf(currentSong.value)
-        val nextIndex = index.plus(1).mod(songList.value.size)
-        val nextItem = songList.value.get(nextIndex)
-
-        currentSong.update { nextItem }
-        val mediaItem = MediaItem.fromUri(Uri.parse(nextItem.path))
-        exoPlayer.setMediaItem(mediaItem)
-
-        exoPlayer.prepare()
-        exoPlayer.play()
-        isPlaying.update { true }
+        if (exoPlayer.hasNextMediaItem()) {
+            exoPlayer.seekToNextMediaItem()
+            exoPlayer.play()
+        } else {
+            exoPlayer.seekTo(0)
+            exoPlayer.play()
+        }
 
         currentSong.value?.let { createNotification(it) }
         updateDurations()
@@ -215,14 +239,9 @@ class MusicPlayerService : Service() {
 
     private fun updateDurations() {
         job = scope.launch {
-            maxDuration.update { currentSong.value?.duration?.toFloat() ?: 0f }
             while (true) {
                 currentDuration.update { exoPlayer.currentPosition.toFloat() }
                 delay(1000)
-                if (exoPlayer.currentPosition.toFloat() >= maxDuration.value && maxDuration.value > 0f) {
-                    next()
-                    break
-                }
             }
         }
     }
@@ -240,9 +259,28 @@ class MusicPlayerService : Service() {
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
 
-        val mediaItems = songList.value.map { song ->
-            MediaItem.fromUri(Uri.parse(song.path))
+        val mediaItems = songList.value.mapNotNull { song ->
+            val path = song.path
+            if (path.isNullOrEmpty()) {
+                null
+            } else {
+                val file = File(path)
+                if (!file.exists()) {
+                    null
+                } else {
+                    val uri = Uri.fromFile(file)
+                    MediaItem.Builder()
+                        .setUri(uri)
+                        .setTag(song.id)
+                        .build()
+                }
+            }
         }
+
+        if (mediaItems.isEmpty()) {
+            return
+        }
+
         val startIndex = songList.value.indexOfFirst { it.id == currentSong.value?.id }
             .takeIf { it >= 0 } ?: 0
 
@@ -260,9 +298,28 @@ class MusicPlayerService : Service() {
         exoPlayer.stop()
         exoPlayer.clearMediaItems()
 
-        val mediaItems = songList.value.map { song ->
-            MediaItem.fromUri(Uri.parse(song.path))
+        val mediaItems = songList.value.mapNotNull { song ->
+            val path = song.path
+            if (path.isNullOrEmpty()) {
+                null
+            } else {
+                val file = File(path)
+                if (!file.exists()) {
+                    null
+                } else {
+                    val uri = Uri.fromFile(file)
+                    MediaItem.Builder()
+                        .setUri(uri)
+                        .setTag(song.id)
+                        .build()
+                }
+            }
         }
+
+        if (mediaItems.isEmpty()) {
+            return
+        }
+
 
         val startIndex = songList.value.indexOfFirst { it.id == currentSong.value?.id }
             .takeIf { it >= 0 } ?: 0
@@ -277,17 +334,22 @@ class MusicPlayerService : Service() {
         exoPlayer.pause()
     }
 
-    fun setRepeatModeOption(option: RepeatModeOption) {
+    fun setRepeatModeOption(option: Boolean) {
         when (option) {
-            RepeatModeOption.ONE -> exoPlayer.repeatMode = Player.REPEAT_MODE_ONE
-            RepeatModeOption.OFF -> exoPlayer.repeatMode = Player.REPEAT_MODE_OFF
+            true -> exoPlayer.repeatMode = Player.REPEAT_MODE_ONE
+            false -> exoPlayer.repeatMode = Player.REPEAT_MODE_OFF
         }
         currentRepeatOption.update { option }
     }
 
+    fun setShuffleMode(status: Boolean) {
+        exoPlayer.shuffleModeEnabled = status
+        currentShuffleStatus.update { status }
+    }
+
     private fun createNotification(song: Song) {
         val albumBitmap = if (song.albumArt.isNullOrEmpty()) {
-            BitmapFactory.decodeResource(resources, R.drawable.vinyl)
+            BitmapFactory.decodeResource(resources, R.drawable.album_art_default)
         } else {
             val albumUri = Uri.parse(song.albumArt)
             this.contentResolver.openInputStream(albumUri)?.use { inputStream ->
@@ -314,7 +376,7 @@ class MusicPlayerService : Service() {
                 createPendingIntent(PLAY_PAUSE)
             )
             .addAction(R.drawable.ic_skip_next, "next", createPendingIntent(NEXT))
-            .setSmallIcon(R.drawable.vinyl)
+            .setSmallIcon(R.drawable.ic_mucsic_note)
             .setLargeIcon(albumBitmap)
             .setVibrate(null)
             .build()
@@ -342,5 +404,11 @@ class MusicPlayerService : Service() {
             intent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        exoPlayer.release()
+        isServiceRunning = false
     }
 }

@@ -185,7 +185,9 @@ class PlaylistViewModel @Inject constructor(
             preferencesManager.savePlaybackSettings(
                 playlistType = true,
                 playlistId = playlistId,
-                lastSongId = list[0].id
+                lastSongId = list[0].id,
+                currentRepeatMode = false,
+                currentShuffleStatus = false
             )
             onAction(PlaylistActions.UpdateRevealedItemId(null))
             onAction(PlaylistActions.UpdatePlaylistSelected(null))

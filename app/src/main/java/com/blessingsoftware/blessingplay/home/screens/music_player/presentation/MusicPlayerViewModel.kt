@@ -1,11 +1,13 @@
 package com.blessingsoftware.blessingplay.home.screens.music_player.presentation
 
+import android.content.Context
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.blessingsoftware.blessingplay.core.data.repository.MusicPlayerRepositoryImpl
-import com.blessingsoftware.blessingplay.core.presentation.utils.RepeatModeOption
+import com.blessingsoftware.blessingplay.core.presentation.utils.PreferencesManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -17,10 +19,13 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MusicPlayerViewModel @Inject constructor(
-    private val musicPlayerRepository: MusicPlayerRepositoryImpl
+    private val musicPlayerRepository: MusicPlayerRepositoryImpl,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
     private val _musicPlayerState = MutableStateFlow(MusicPlayerState())
     val musicPlayerState = _musicPlayerState.asStateFlow()
+
+    private val preferencesManager = PreferencesManager(context)
 
     init {
         musicPlayerRepository.bindService()
@@ -36,6 +41,7 @@ class MusicPlayerViewModel @Inject constructor(
         updateCurrentDuration()
         updateIsPlay()
         updateCurrentRepeatModeOption()
+        updateCurrentShuffleStatus()
     }
 
     private fun updateCurrentSong() {
@@ -88,6 +94,16 @@ class MusicPlayerViewModel @Inject constructor(
         }
     }
 
+    private fun updateCurrentShuffleStatus() {
+        viewModelScope.launch {
+            musicPlayerRepository.currentShuffleStatus.collectLatest { status ->
+                _musicPlayerState.update {
+                    it.copy(currentShuffleStatus = status)
+                }
+            }
+        }
+    }
+
     fun prevSong() {
         musicPlayerRepository.prev()
     }
@@ -110,8 +126,32 @@ class MusicPlayerViewModel @Inject constructor(
         musicPlayerRepository.seekTo(newPosition)
     }
 
-    fun setRepeatModeOption(option: RepeatModeOption) {
-        musicPlayerRepository.setRepeatModeOption(option)
+    fun setRepeatModeOption(option: Boolean) {
+        viewModelScope.launch {
+            musicPlayerRepository.setRepeatModeOption(option)
+            val currentSettings = preferencesManager.playbackSettingsFlow.first()
+            preferencesManager.savePlaybackSettings(
+                playlistType = currentSettings.playlistType,
+                playlistId = currentSettings.playlistId,
+                lastSongId = currentSettings.lastSongId,
+                currentRepeatMode = option,
+                currentShuffleStatus = currentSettings.currentShuffleStatus
+            )
+        }
+    }
+
+    fun setShuffleStatus(status: Boolean) {
+        viewModelScope.launch {
+            musicPlayerRepository.setShuffleStatus(status)
+            val currentSettings = preferencesManager.playbackSettingsFlow.first()
+            preferencesManager.savePlaybackSettings(
+                playlistType = currentSettings.playlistType,
+                playlistId = currentSettings.playlistId,
+                lastSongId = currentSettings.lastSongId,
+                currentRepeatMode = currentSettings.currentRepeatMode,
+                currentShuffleStatus = status
+            )
+        }
     }
 
     override fun onCleared() {

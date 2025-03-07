@@ -23,6 +23,13 @@ android {
     }
 
     buildTypes {
+        getByName("debug") {
+            buildConfigField("String", "API_BASE_URL", "\"http://192.168.0.180:8000/\"")
+        }
+        getByName("release") {
+            buildConfigField("String", "API_BASE_URL", "\"https://blessingsoftware.id.vn/\"")
+            isMinifyEnabled = true
+        }
         release {
             isMinifyEnabled = true
             isShrinkResources = true
@@ -58,6 +65,7 @@ dependencies {
 
     // Exoplayer
     implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.multidex)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

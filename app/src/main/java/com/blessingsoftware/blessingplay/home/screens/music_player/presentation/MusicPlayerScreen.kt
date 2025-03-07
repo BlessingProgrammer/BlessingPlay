@@ -40,6 +40,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +54,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,7 +64,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.blessingsoftware.blessingplay.R
 import com.blessingsoftware.blessingplay.core.domain.model.Song
-import com.blessingsoftware.blessingplay.core.presentation.utils.RepeatModeOption
 import com.blessingsoftware.blessingplay.core.presentation.utils.formatDuration
 
 @Composable
@@ -74,63 +75,71 @@ fun MusicPlayerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.45f))
-            .padding(16.dp)
+            .background(Color.Black)
     ) {
         MusicProfile(
             song = musicPlayerState.songSelected,
             isPlaying = musicPlayerState.isPlaying
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 6.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(text = formatDuration(musicPlayerState.currentDuration.toLong()))
-                Spacer(modifier = Modifier.weight(1f))
-                Text(text = formatDuration(musicPlayerState.maxDuration.toLong()))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(horizontal = 8.dp)
+                .padding(vertical = 5.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = formatDuration(musicPlayerState.currentDuration.toLong()))
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(text = formatDuration(musicPlayerState.maxDuration.toLong()))
+                }
+                key(musicPlayerState.maxDuration) {
+                    CustomSlider(
+                        value = musicPlayerState.currentDuration,
+                        onValueChange = { newValue ->
+                            musicPlayerViewModel.updateCurrentPosition(newValue)
+                        },
+                        onValueChangeFinished = { finalValue ->
+                            musicPlayerViewModel.onSliderValueChanged(finalValue)
+                        },
+                        valueRange = 0f..musicPlayerState.maxDuration,
+                        modifier = Modifier.fillMaxWidth(),
+                        activeTrackColor = Color.White,
+                        inactiveTrackColor = Color.DarkGray,
+                        thumbColor = Color.White
+                    )
+                }
             }
 
-            CustomSlider(
-                value = musicPlayerState.currentDuration,
-                onValueChange = { newValue ->
-                    musicPlayerViewModel.updateCurrentPosition(newValue)
+            MusicController(
+                isPlay = musicPlayerState.isPlaying,
+                shuffleOnClick = {
+                    musicPlayerViewModel.setShuffleStatus(it)
                 },
-                onValueChangeFinished = { finalValue ->
-                    musicPlayerViewModel.onSliderValueChanged(finalValue)
+                shuffleStatus = musicPlayerState.currentShuffleStatus,
+                skipPreviousOnClick = {
+                    musicPlayerViewModel.prevSong()
                 },
-                valueRange = 0f..musicPlayerState.maxDuration,
-                modifier = Modifier.fillMaxWidth(),
-                activeTrackColor = Color.White,
-                inactiveTrackColor = Color.DarkGray,
-                thumbColor = Color.White
+                controllerOnClick = {
+                    musicPlayerViewModel.playPauseMusic()
+                },
+                skipNextOnClick = {
+                    musicPlayerViewModel.nextSong()
+                },
+                repeatModeOption = musicPlayerState.currentRepeatModeOption,
+                repeatModeOnClick = {
+                    musicPlayerViewModel.setRepeatModeOption(it)
+                }
             )
         }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        MusicController(
-            isPlay = musicPlayerState.isPlaying,
-            shuffleOnClick = {},
-            skipPreviousOnClick = {
-                musicPlayerViewModel.prevSong()
-            },
-            controllerOnClick = {
-                musicPlayerViewModel.playPauseMusic()
-            },
-            skipNextOnClick = {
-                musicPlayerViewModel.nextSong()
-            },
-            repeatModeOption = musicPlayerState.currentRepeatModeOption,
-            repeatModeOnClick = {
-                musicPlayerViewModel.setRepeatModeOption(it)
-            }
-        )
 
     }
 }
@@ -143,13 +152,14 @@ fun CustomSlider(
     valueRange: ClosedFloatingPointRange<Float>,
     modifier: Modifier = Modifier,
     trackHeight: Float = 12f,
-    thumbRadius: Float = 30f,
+    thumbRadius: Float = 25f,
     activeTrackColor: Color,
     inactiveTrackColor: Color,
     thumbColor: Color,
 ) {
     var thumbPosition by remember { mutableFloatStateOf(value) }
     var isDragging by remember { mutableStateOf(false) }
+    var canvasWidth by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(value) {
         if (!isDragging) {
@@ -161,22 +171,26 @@ fun CustomSlider(
         modifier = modifier
             .fillMaxWidth()
             .height(15.dp)
-            .padding(horizontal = 3.dp)
+            .onGloballyPositioned { coordinates ->
+                canvasWidth = coordinates.size.width.toFloat()
+            }
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { offset ->
                         isDragging = true
-                        val clampedX = offset.x.coerceIn(0f, size.width.toFloat())
+                        val clampedX = offset.x.coerceIn(0f, canvasWidth)
                         val newPosition =
-                            (clampedX / size.width) * (valueRange.endInclusive - valueRange.start) + valueRange.start
-                        thumbPosition = newPosition.coerceIn(valueRange)
+                            (clampedX / canvasWidth) * (valueRange.endInclusive - valueRange.start) + valueRange.start
+                        thumbPosition =
+                            newPosition.coerceIn(valueRange.start, valueRange.endInclusive)
                         onValueChange(thumbPosition)
                     },
                     onDrag = { change, _ ->
-                        val clampedX = change.position.x.coerceIn(0f, size.width.toFloat())
+                        val clampedX = change.position.x.coerceIn(0f, canvasWidth)
                         val newPosition =
-                            (clampedX / size.width) * (valueRange.endInclusive - valueRange.start) + valueRange.start
-                        thumbPosition = newPosition.coerceIn(valueRange)
+                            (clampedX / canvasWidth) * (valueRange.endInclusive - valueRange.start) + valueRange.start
+                        thumbPosition =
+                            newPosition.coerceIn(valueRange.start, valueRange.endInclusive)
                         onValueChange(thumbPosition)
                     },
                     onDragEnd = {
@@ -186,11 +200,12 @@ fun CustomSlider(
                 )
             }
     ) {
+        val effectiveWidth = if (canvasWidth > 0) canvasWidth else size.width
         val trackStart = Offset(0f, center.y)
-        val trackEnd = Offset(size.width, center.y)
+        val trackEnd = Offset(effectiveWidth, center.y)
         val currentValue = if (isDragging) thumbPosition else value
         val thumbX =
-            ((currentValue - valueRange.start) / (valueRange.endInclusive - valueRange.start)) * size.width
+            ((currentValue - valueRange.start) / (valueRange.endInclusive - valueRange.start)) * effectiveWidth
         val thumbCenter = Offset(thumbX, center.y)
 
         drawLine(
@@ -214,6 +229,7 @@ fun CustomSlider(
         )
     }
 }
+
 
 @Composable
 private fun MusicProfile(song: Song?, isPlaying: Boolean) {
@@ -239,28 +255,69 @@ private fun MusicProfile(song: Song?, isPlaying: Boolean) {
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .background(Color.Transparent)
-                    .rotate(finalRotation)
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.vinyl_bg),
-                    contentDescription = "Vinyl Art",
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(CircleShape)
-                        .align(Alignment.Center),
-                    contentScale = ContentScale.Crop
-                )
 
                 if (!it.albumArt.isNullOrEmpty()) {
                     AsyncImage(
                         model = it.albumArt,
-                        contentDescription = "Album Art",
+                        contentDescription = "${it.artistId} Bg",
                         modifier = Modifier
-                            .size(105.dp)
-                            .align(Alignment.Center)
-                            .clip(CircleShape),
+                            .fillMaxSize()
+                            .align(Alignment.Center),
+                        contentScale = ContentScale.FillHeight,
+                        alpha = 0.35f
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.album_art_default),
+                        contentDescription = "Album Art Default Bg",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .align(Alignment.Center),
+                        contentScale = ContentScale.FillHeight,
+                        alpha = 0.3f
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center)
+                        .background(Color.Transparent)
+                        .padding(50.dp)
+                        .rotate(finalRotation)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.vinyl_bg),
+                        contentDescription = "Vinyl Art",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .align(Alignment.Center),
                         contentScale = ContentScale.Crop
                     )
+
+                    if (!it.albumArt.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = it.albumArt,
+                            contentDescription = "${it.artistId} Thumbnail",
+                            modifier = Modifier
+                                .size(105.dp)
+                                .align(Alignment.Center)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.album_art_default),
+                            contentDescription = "Album Art Default",
+                            modifier = Modifier
+                                .size(105.dp)
+                                .align(Alignment.Center)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
             }
         } ?: run {
@@ -272,9 +329,12 @@ private fun MusicProfile(song: Song?, isPlaying: Boolean) {
             )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Column {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp)
+                .padding(horizontal = 8.dp)
+        ) {
             Text(
                 text = song?.title ?: "Loading...",
                 fontSize = 18.sp,
@@ -300,12 +360,13 @@ private fun MusicProfile(song: Song?, isPlaying: Boolean) {
 @Composable
 private fun MusicController(
     isPlay: Boolean = false,
-    shuffleOnClick: () -> Unit,
+    shuffleOnClick: (status: Boolean) -> Unit,
+    shuffleStatus: Boolean,
     skipPreviousOnClick: () -> Unit,
     controllerOnClick: () -> Unit,
     skipNextOnClick: () -> Unit,
-    repeatModeOnClick: (option: RepeatModeOption) -> Unit,
-    repeatModeOption: RepeatModeOption
+    repeatModeOnClick: (option: Boolean) -> Unit,
+    repeatModeOption: Boolean
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -313,13 +374,21 @@ private fun MusicController(
         horizontalArrangement = Arrangement.Center
     ) {
         MusicControllerButton(
-            onClick = { shuffleOnClick() },
+            onClick = {
+                when (shuffleStatus) {
+                    true -> shuffleOnClick(false)
+                    false -> shuffleOnClick(true)
+                }
+            },
             icon = Icons.Default.Shuffle,
             modifier = Modifier
                 .fillMaxHeight()
                 .width(30.dp),
             contentDescription = "Shuffle",
-            tint = Color.White
+            tint = when (shuffleStatus) {
+                true -> Color.White
+                false -> Color.DarkGray
+            }
         )
         Row(
             modifier = Modifier.padding(horizontal = 35.dp),
@@ -354,13 +423,13 @@ private fun MusicController(
         MusicControllerButton(
             onClick = {
                 when (repeatModeOption) {
-                    RepeatModeOption.ONE -> repeatModeOnClick(RepeatModeOption.OFF)
-                    RepeatModeOption.OFF -> repeatModeOnClick(RepeatModeOption.ONE)
+                    true -> repeatModeOnClick(false)
+                    false -> repeatModeOnClick(true)
                 }
             },
             icon = when (repeatModeOption) {
-                RepeatModeOption.ONE -> Icons.Default.RepeatOne
-                RepeatModeOption.OFF -> Icons.Default.Repeat
+                true -> Icons.Default.RepeatOne
+                false -> Icons.Default.Repeat
             },
             modifier = Modifier
                 .fillMaxHeight()

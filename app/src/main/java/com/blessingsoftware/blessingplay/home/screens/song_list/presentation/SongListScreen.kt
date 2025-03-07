@@ -1,5 +1,6 @@
 package com.blessingsoftware.blessingplay.home.screens.song_list.presentation
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -138,6 +139,7 @@ fun SongListScreen(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .fillMaxWidth()
+                        .background(Color.Black)
                         .padding(vertical = 8.dp)
                 )
                 UnderlinedSearchTextField(
@@ -151,10 +153,12 @@ fun SongListScreen(
                     modifier = Modifier.fillMaxWidth(),
                     onImeAction = {
                         coroutineScope.launch {
-                            listState.animateScrollToItem(
-                                index = songListState.indexListSearching.first()
-                            )
-                            currentQueryIndex.value = 0
+                            if (songListState.indexListSearching.isNotEmpty()) {
+                                listState.animateScrollToItem(
+                                    index = songListState.indexListSearching.first()
+                                )
+                                currentQueryIndex.value = 0
+                            }
                         }
                     },
                     onUp = {
@@ -218,13 +222,15 @@ fun SongListScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.45f))
                     .padding(paddingValues)
             ) {
                 if (songListState.dataLoading) {
                     item {
                         Box(
                             modifier = Modifier
-                                .fillParentMaxSize(),
+                                .fillParentMaxSize()
+                                .background(Color.Black),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(
@@ -237,7 +243,8 @@ fun SongListScreen(
                         item {
                             Box(
                                 modifier = Modifier
-                                    .fillParentMaxSize(),
+                                    .fillParentMaxSize()
+                                    .background(Color.Black),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -255,7 +262,8 @@ fun SongListScreen(
                                     fontWeight = FontWeight.Bold,
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 10.dp, top = 7.dp, bottom = 3.dp)
+                                        .padding(start = 10.dp)
+                                        .padding(vertical = 12.dp)
                                 )
                             }
                             itemsIndexed(
@@ -447,9 +455,6 @@ fun SongListScreen(
                             }
                         }
                     },
-                    onNextPlay = {
-
-                    },
                     onDetail = {
                         songListViewModel.onAction(
                             SongListActions.UpdateIsDetailDialog(true)
@@ -459,9 +464,6 @@ fun SongListScreen(
                         songListViewModel.onAction(
                             SongListActions.UpdateIsPlaylistDialog(true)
                         )
-                    },
-                    onAddToWaitingList = {
-
                     }
                 )
             }
@@ -513,6 +515,7 @@ private fun ListSongItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .background(Color.Black)
             .padding(start = 8.dp)
             .clickable { onClick() },
         verticalAlignment = Alignment.CenterVertically
@@ -585,7 +588,7 @@ private fun UnderlinedSearchTextField(
     currentIndex: Int = 1
 ) {
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.fillMaxWidth().background(Color.Black)
     ) {
         Box(
             modifier = modifier
@@ -746,10 +749,8 @@ private fun SongUpdateDialog(
 @Composable
 private fun SongExtendDialog(
     onPlay: () -> Unit,
-    onNextPlay: () -> Unit,
     onDetail: () -> Unit,
-    onAddToPlaylist: () -> Unit,
-    onAddToWaitingList: () -> Unit
+    onAddToPlaylist: () -> Unit
 ) {
     Column(
         modifier = Modifier.fillMaxWidth()
@@ -759,20 +760,12 @@ private fun SongExtendDialog(
             onClick = { onPlay() }
         )
         SongExtraButton(
-            title = "Next play",
-            onClick = { onNextPlay() }
-        )
-        SongExtraButton(
             title = "Detail",
             onClick = { onDetail() }
         )
         SongExtraButton(
             title = "Add to playlist",
             onClick = { onAddToPlaylist() }
-        )
-        SongExtraButton(
-            title = "Add to waiting list",
-            onClick = { onAddToWaitingList() }
         )
     }
 }

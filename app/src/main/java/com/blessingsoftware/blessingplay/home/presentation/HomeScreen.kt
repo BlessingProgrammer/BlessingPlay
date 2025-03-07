@@ -13,10 +13,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Settings
@@ -46,6 +48,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.blessingsoftware.blessingplay.R
+import com.blessingsoftware.blessingplay.home.screens.more_song.presentation.MoreSongScreen
 import com.blessingsoftware.blessingplay.home.screens.music_player.presentation.MusicPlayerScreen
 import com.blessingsoftware.blessingplay.home.screens.song_list.presentation.SongListScreen
 import com.blessingsoftware.blessingplay.home.screens.playlist.presentation.PlaylistScreen
@@ -77,10 +80,10 @@ fun HomeScreen(navController: NavController) {
             unselectedIcon = null
         ),
         BottomNavItem(
-            title = "Album",
-            screen = BottomNavScreen.Album,
-            selectedIcon = Icons.Filled.Star,
-            unselectedIcon = Icons.Outlined.Star
+            title = "More song",
+            screen = BottomNavScreen.MoreSong,
+            selectedIcon = Icons.Filled.Download,
+            unselectedIcon = Icons.Outlined.Download
         ),
         BottomNavItem(
             title = "Setting",
@@ -111,7 +114,7 @@ fun HomeScreen(navController: NavController) {
                         )
                     }
                     composable<BottomNavScreen.MusicPlayer> { MusicPlayerScreen() }
-                    composable<BottomNavScreen.Album> { SettingScreen() }
+                    composable<BottomNavScreen.MoreSong> { MoreSongScreen() }
                     composable<BottomNavScreen.Setting> { SettingScreen() }
                 }
             }
@@ -127,7 +130,7 @@ fun BottomNavigationBar(
     val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route?.substringAfterLast(".")
 
-    NavigationBar(modifier = Modifier.height(80.dp)) {
+    NavigationBar(modifier = Modifier.height(85.dp)) {
         bottomNavItems.forEach { item ->
             if (item.screen == BottomNavScreen.MusicPlayer) {
                 Image(
@@ -141,7 +144,7 @@ fun BottomNavigationBar(
                         .clickable {
                             bottomNavController.navigate(item.screen) {
                                 popUpTo(bottomNavController.graph.startDestinationId) {
-                                    saveState = false
+                                    saveState = true
                                 }
                                 launchSingleTop = true
                                 restoreState = true

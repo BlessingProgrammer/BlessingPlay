@@ -1,6 +1,7 @@
 package com.blessingsoftware.blessingplay.core.presentation
 
 import android.Manifest
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -28,11 +29,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.blessingsoftware.blessingplay.core.presentation.ui.theme.BlessingPlayTheme
+import com.blessingsoftware.blessingplay.core.service.MusicPlayerService
 import com.blessingsoftware.blessingplay.home.presentation.HomeScreen
 import com.blessingsoftware.blessingplay.playlist_songs.presentation.PlaylistSongsScreen
 import com.blessingsoftware.blessingplay.splash.presentation.SplashScreen
@@ -45,6 +48,12 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        if (!MusicPlayerService.isServiceRunning) {
+            val serviceIntent = Intent(this, MusicPlayerService::class.java)
+            ContextCompat.startForegroundService(this, serviceIntent)
+        }
+
         enableEdgeToEdge()
         setContent {
             BlessingPlayTheme {

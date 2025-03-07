@@ -52,6 +52,8 @@ import com.blessingsoftware.blessingplay.core.presentation.Screen
 import com.blessingsoftware.blessingplay.home.presentation.component.ActionIcon
 import com.blessingsoftware.blessingplay.home.presentation.component.SwipeAbleItemWithActions
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import com.blessingsoftware.blessingplay.home.presentation.component.HomeDialog
@@ -90,15 +92,21 @@ fun PlaylistSongsScreen(
 
     Scaffold(
         topBar = {
-            Box(modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black)
+                    .padding(top = 8.dp)
+                    .padding(bottom = 12.dp)
+            ) {
                 ActionIcon(
                     onClick = {
                         navController.popBackStack()
                     },
                     backgroundColor = Color.Transparent,
-                    icon = Icons.Filled.ArrowBack,
+                    icon = Icons.Default.ArrowBack,
                     modifier = Modifier
-                        .width(35.dp)
+                        .size(35.dp)
                         .align(Alignment.CenterStart)
                 )
                 Text(
@@ -109,7 +117,7 @@ fun PlaylistSongsScreen(
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp)
+                        .align(Alignment.Center)
                 )
             }
         }
@@ -119,13 +127,15 @@ fun PlaylistSongsScreen(
             state = listState,
             modifier = Modifier
                 .fillMaxSize()
+                .background(Color.Black)
                 .padding(paddingValues)
         ) {
             if (playlistSongsState.songWithPositionLists.isEmpty()) {
                 item {
                     Box(
                         modifier = Modifier
-                            .fillParentMaxSize(),
+                            .fillParentMaxSize()
+                            .background(Color.Black),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -141,8 +151,9 @@ fun PlaylistSongsScreen(
                         contentDescription = playlistId.toString(),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(220.dp)
-                            .clip(RoundedCornerShape(16.dp)),
+                            .height(240.dp)
+                            .clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))
+                            .padding(bottom = 8.dp),
                         contentScale = ContentScale.Crop
                     )
                     Spacer(modifier = Modifier.height(5.dp))
@@ -270,6 +281,7 @@ private fun ListSongWithPositionItem(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .background(Color.Black)
             .pointerInput(Unit) {
                 detectDragGesturesAfterLongPress(
                     onDragStart = {
@@ -329,6 +341,22 @@ private fun ListSongWithPositionItem(
             Column(
                 modifier = Modifier
                     .weight(1f)
+                    .drawBehind {
+                        val strokeWidth = 0.5.dp.toPx()
+                        val color = Color.Gray
+                        drawLine(
+                            color = color,
+                            start = Offset(0f, 0f),
+                            end = Offset(size.width, 0f),
+                            strokeWidth = strokeWidth
+                        )
+                        drawLine(
+                            color = color,
+                            start = Offset(0f, size.height),
+                            end = Offset(size.width, size.height),
+                            strokeWidth = strokeWidth
+                        )
+                    }
                     .padding(vertical = 5.dp),
                 verticalArrangement = Arrangement.Center
             ) {

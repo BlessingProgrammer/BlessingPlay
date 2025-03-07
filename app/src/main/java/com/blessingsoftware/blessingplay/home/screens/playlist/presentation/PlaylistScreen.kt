@@ -128,7 +128,9 @@ fun PlaylistScreen(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .background(Color.Black)
+                    .padding(top = 8.dp)
+                    .padding(bottom = 12.dp)
             )
         },
         floatingActionButton = {
@@ -160,13 +162,15 @@ fun PlaylistScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Color.Black)
                     .padding(paddingValues)
             ) {
                 if (playlistState.dataLoading) {
                     item {
                         Box(
                             modifier = Modifier
-                                .fillParentMaxSize(),
+                                .fillParentMaxSize()
+                                .background(Color.Black),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(
@@ -179,7 +183,8 @@ fun PlaylistScreen(
                         item {
                             Box(
                                 modifier = Modifier
-                                    .fillParentMaxSize(),
+                                    .fillParentMaxSize()
+                                    .background(Color.Black),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
@@ -402,6 +407,7 @@ private fun PlaylistItem(
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .background(Color.Black)
             .padding(start = 8.dp)
             .clickable { onClick() },
         verticalAlignment = Alignment.CenterVertically

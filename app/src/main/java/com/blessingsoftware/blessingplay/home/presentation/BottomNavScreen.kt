@@ -13,7 +13,7 @@ sealed interface BottomNavScreen {
     data object MusicPlayer : BottomNavScreen
 
     @Serializable
-    data object Album : BottomNavScreen
+    data object MoreSong : BottomNavScreen
 
     @Serializable
     data object Setting : BottomNavScreen

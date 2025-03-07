@@ -40,7 +40,9 @@ class SplashViewModel @Inject constructor(
                 preferencesManager.savePlaybackSettings(
                     playlistType = false,
                     playlistId = null,
-                    lastSongId = null
+                    lastSongId = null,
+                    currentRepeatMode = false,
+                    currentShuffleStatus = false
                 )
             }
             _isLoading.value = false

@@ -47,6 +47,7 @@ material3="1.3.1"
 # Paging
 pagingCompose="3.3.5"
 media3Exoplayer = "1.5.1"
+multidex = "2.0.1"
 
 [libraries]
 accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontroller" }
@@ -107,6 +108,7 @@ datastore-core = { module = "androidx.datastore:datastore-core", version.ref = "
 # Paging
 paging-compose = { module = "androidx.paging:paging-compose", version.ref = "pagingCompose" }
 androidx-media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", version.ref = "media3Exoplayer" }
+androidx-multidex = { group = "androidx.multidex", name = "multidex", version.ref = "multidex" }
 
 [bundles]
 serialization = ["kotlinx-serialization-core", "kotlinx-serialization-json"]
