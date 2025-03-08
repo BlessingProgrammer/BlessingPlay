@@ -24,10 +24,10 @@ android {
 
     buildTypes {
         getByName("debug") {
-            buildConfigField("String", "API_BASE_URL", "\"http://192.168.0.180:8000/\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://e7e9-116-96-46-49.ngrok-free.app\"")
         }
         getByName("release") {
-            buildConfigField("String", "API_BASE_URL", "\"https://blessingsoftware.id.vn/\"")
+            buildConfigField("String", "API_BASE_URL", "\"https://blessingsoftware.id.vn\"")
             isMinifyEnabled = true
         }
         release {
@@ -49,6 +49,14 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+
+    packaging {
+        resources {
+            excludes += "META-INF/LICENSE.md"
+            excludes += "META-INF/LICENSE-notice.md"
+        }
     }
 }
 

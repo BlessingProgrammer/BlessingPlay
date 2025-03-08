@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.blessingsoftware.blessingplay.core.presentation.ui.theme.Black17
 
 @Composable
 fun HomeDialog(
@@ -33,7 +34,7 @@ fun HomeDialog(
             Surface(
                 modifier = modifier,
                 shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surface,
+                color = Black17,
                 tonalElevation = 8.dp
             ) {
                 Column(

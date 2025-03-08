@@ -1,7 +1,9 @@
 package com.blessingsoftware.blessingplay.core.presentation
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
@@ -30,10 +32,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.blessingsoftware.blessingplay.core.data.local.AppDb
 import com.blessingsoftware.blessingplay.core.presentation.ui.theme.BlessingPlayTheme
 import com.blessingsoftware.blessingplay.core.service.MusicPlayerService
 import com.blessingsoftware.blessingplay.home.presentation.HomeScreen
@@ -41,19 +45,32 @@ import com.blessingsoftware.blessingplay.playlist_songs.presentation.PlaylistSon
 import com.blessingsoftware.blessingplay.splash.presentation.SplashScreen
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 @ExperimentalMaterial3Api
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var appDb: AppDb
+
+    @SuppressLint("SourceLockedOrientationActivity")
     @RequiresApi(Build.VERSION_CODES.R)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        if (!MusicPlayerService.isServiceRunning) {
-            val serviceIntent = Intent(this, MusicPlayerService::class.java)
-            ContextCompat.startForegroundService(this, serviceIntent)
+        lifecycleScope.launch(Dispatchers.Main) {
+            if (appDb.songDao.getSongCount() > 0) {
+                if (!MusicPlayerService.isServiceRunning) {
+                    val serviceIntent = Intent(this@MainActivity, MusicPlayerService::class.java)
+                    ContextCompat.startForegroundService(this@MainActivity, serviceIntent)
+                }
+            }
         }
 
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
         enableEdgeToEdge()
         setContent {
             BlessingPlayTheme {
@@ -114,7 +131,7 @@ private fun SetStatusBarColor() {
 
     SideEffect {
         systemUiController.setStatusBarColor(
-            color = if (isDarkTheme) Color.Black else Color.White,
+            color = Color.Black,
             darkIcons = !isDarkTheme
         )
     }

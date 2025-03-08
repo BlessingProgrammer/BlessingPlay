@@ -25,15 +25,20 @@ class SongRepositoryImpl(
     private val songDao = appDb.songDao
     private val songRemovedDao = appDb.songRemovedDao
 
-    override suspend fun loadMediaFileAndSaveToDb(): Unit = withContext(Dispatchers.IO) {
-        val grouped = getMediaFile()
-            .sortedBy { it.title.trim() }
-            .groupBy { song ->
-                val normalizedChar = normalizeFirstChar(song.title.trim().firstOrNull())
-                if (normalizedChar in 'A'..'Z') normalizedChar else '#'
-            }
-        val songEntityList = grouped.values.flatten()
-        songDao.firstInsertSongEntities(songEntityList)
+    override suspend fun loadMediaFileAndSaveToDb(): Boolean = withContext(Dispatchers.IO) {
+        if (songDao.getSongCount() > 0) {
+            return@withContext true
+        } else {
+            val grouped = getMediaFile()
+                .sortedBy { it.title.trim() }
+                .groupBy { song ->
+                    val normalizedChar = normalizeFirstChar(song.title.trim().firstOrNull())
+                    if (normalizedChar in 'A'..'Z') normalizedChar else '#'
+                }
+            val songEntityList = grouped.values.flatten()
+            songDao.firstInsertSongEntities(songEntityList)
+            return@withContext false
+        }
     }
 
     override suspend fun getAllSongs(): List<Song> {

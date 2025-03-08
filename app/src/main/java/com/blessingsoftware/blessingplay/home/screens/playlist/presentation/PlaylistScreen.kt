@@ -140,6 +140,8 @@ fun PlaylistScreen(
                         PlaylistActions.UpdateIsAddDialog(true)
                     )
                 },
+                containerColor = Color.White,
+                contentColor = Color.Black,
                 shape = CircleShape
             ) {
                 Icon(
@@ -278,7 +280,7 @@ fun PlaylistScreen(
                                                     name = playlist.name,
                                                     thumbnail = playlist.thumbnail
                                                 )
-                                            ){
+                                            ) {
                                                 popUpTo(navController.graph.startDestinationId) {
                                                     saveState = true
                                                 }

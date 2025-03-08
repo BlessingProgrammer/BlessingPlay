@@ -1,32 +1,27 @@
 package com.blessingsoftware.blessingplay.home.presentation
 
 import android.annotation.SuppressLint
-import android.widget.ImageButton
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Menu
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -130,18 +125,42 @@ fun BottomNavigationBar(
     val navBackStackEntry by bottomNavController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route?.substringAfterLast(".")
 
-    NavigationBar(modifier = Modifier.height(85.dp)) {
-        bottomNavItems.forEach { item ->
-            if (item.screen == BottomNavScreen.MusicPlayer) {
-                Image(
-                    painter = painterResource(id = R.drawable.vinyl),
-                    contentDescription = "Music player button",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .padding(horizontal = 5.dp)
-                        .size(65.dp)
-                        .clip(CircleShape)
-                        .clickable {
+    Column {
+        HorizontalDivider(
+            modifier = Modifier.fillMaxWidth(),
+            thickness = 1.dp,
+            color = Color.DarkGray.copy(alpha = 0.5f)
+        )
+
+        NavigationBar(
+            containerColor = Color.Black,
+            tonalElevation = 15.dp
+        ) {
+            bottomNavItems.forEach { item ->
+                if (item.screen == BottomNavScreen.MusicPlayer) {
+                    Image(
+                        painter = painterResource(id = R.drawable.vinyl),
+                        contentDescription = "Music player button",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .padding(horizontal = 5.dp)
+                            .size(62.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                bottomNavController.navigate(item.screen) {
+                                    popUpTo(bottomNavController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            }
+                    )
+                } else {
+                    NavigationBarItem(
+                        modifier = Modifier.align(Alignment.CenterVertically),
+                        selected = false,
+                        onClick = {
                             bottomNavController.navigate(item.screen) {
                                 popUpTo(bottomNavController.graph.startDestinationId) {
                                     saveState = true
@@ -149,38 +168,25 @@ fun BottomNavigationBar(
                                 launchSingleTop = true
                                 restoreState = true
                             }
-                        }
-                )
-            } else {
-                NavigationBarItem(
-                    modifier = Modifier.align(Alignment.CenterVertically),
-                    selected = false,
-                    onClick = {
-                        bottomNavController.navigate(item.screen) {
-                            popUpTo(bottomNavController.graph.startDestinationId) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    label = {
-                        Text(
-                            text = item.title,
-                            fontSize = 10.sp,
-                            color = if (currentRoute == item.screen.toString()) Color.Green else Color.White
-                        )
-                    },
-                    icon = {
-                        (if (currentRoute == item.screen.toString()) item.selectedIcon else item.unselectedIcon)?.let {
-                            Icon(
-                                imageVector = it,
-                                contentDescription = item.title,
-                                tint = if (currentRoute == item.screen.toString()) Color.Green else Color.White,
+                        },
+                        label = {
+                            Text(
+                                text = item.title,
+                                fontSize = 10.sp,
+                                color = if (currentRoute == item.screen.toString()) Color.Green else Color.White
                             )
+                        },
+                        icon = {
+                            (if (currentRoute == item.screen.toString()) item.selectedIcon else item.unselectedIcon)?.let {
+                                Icon(
+                                    imageVector = it,
+                                    contentDescription = item.title,
+                                    tint = if (currentRoute == item.screen.toString()) Color.Green else Color.White,
+                                )
+                            }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }

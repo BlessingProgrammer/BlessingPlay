@@ -171,7 +171,7 @@ class SongListViewModel @Inject constructor(
         onAction(SongListActions.UpdatePullLoading(true))
         insertSongs.invoke()
         onAction(SongListActions.LoadSongs)
-        delay(300)
+        delay(500)
         onAction(SongListActions.UpdatePullLoading(false))
     }
 

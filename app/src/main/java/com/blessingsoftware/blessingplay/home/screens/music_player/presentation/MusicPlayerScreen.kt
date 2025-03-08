@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -77,6 +76,7 @@ fun MusicPlayerScreen(
             .fillMaxSize()
             .background(Color.Black)
     ) {
+
         MusicProfile(
             song = musicPlayerState.songSelected,
             isPlaying = musicPlayerState.isPlaying
@@ -86,11 +86,13 @@ fun MusicPlayerScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = 12.dp)
                 .padding(vertical = 5.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+            verticalArrangement = Arrangement.Center,
         ) {
-            Column {
+            Column(
+                modifier = Modifier.padding(bottom = 15.dp)
+            ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -137,10 +139,10 @@ fun MusicPlayerScreen(
                 repeatModeOption = musicPlayerState.currentRepeatModeOption,
                 repeatModeOnClick = {
                     musicPlayerViewModel.setRepeatModeOption(it)
-                }
+                },
+                isEnable = musicPlayerState.songSelected != null
             )
         }
-
     }
 }
 
@@ -230,7 +232,6 @@ fun CustomSlider(
     }
 }
 
-
 @Composable
 private fun MusicProfile(song: Song?, isPlaying: Boolean) {
 
@@ -249,116 +250,110 @@ private fun MusicProfile(song: Song?, isPlaying: Boolean) {
             .fillMaxWidth()
             .background(Color.Transparent)
     ) {
-        song?.let {
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .background(Color.Transparent)
+        ) {
+
+            if (!song?.albumArt.isNullOrEmpty()) {
+                AsyncImage(
+                    model = song?.albumArt,
+                    contentDescription = "${song?.artistId} Bg",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center),
+                    contentScale = ContentScale.FillHeight,
+                    alpha = 0.35f
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.album_art_default),
+                    contentDescription = "Album Art Default Bg",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center),
+                    contentScale = ContentScale.FillHeight,
+                    alpha = 0.3f
+                )
+            }
+
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
+                    .fillMaxSize()
+                    .align(Alignment.Center)
                     .background(Color.Transparent)
+                    .padding(50.dp)
+                    .rotate(finalRotation)
             ) {
+                Image(
+                    painter = painterResource(id = R.drawable.vinyl_bg),
+                    contentDescription = "Vinyl Art",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .align(Alignment.Center),
+                    contentScale = ContentScale.Crop
+                )
 
-                if (!it.albumArt.isNullOrEmpty()) {
+                if (!song?.albumArt.isNullOrEmpty()) {
                     AsyncImage(
-                        model = it.albumArt,
-                        contentDescription = "${it.artistId} Bg",
+                        model = song?.albumArt,
+                        contentDescription = "${song?.artistId} Thumbnail",
                         modifier = Modifier
-                            .fillMaxSize()
-                            .align(Alignment.Center),
-                        contentScale = ContentScale.FillHeight,
-                        alpha = 0.35f
+                            .size(105.dp)
+                            .align(Alignment.Center)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
                     )
                 } else {
                     Image(
                         painter = painterResource(id = R.drawable.album_art_default),
-                        contentDescription = "Album Art Default Bg",
+                        contentDescription = "Album Art Default",
                         modifier = Modifier
-                            .fillMaxSize()
-                            .align(Alignment.Center),
-                        contentScale = ContentScale.FillHeight,
-                        alpha = 0.3f
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .align(Alignment.Center)
-                        .background(Color.Transparent)
-                        .padding(50.dp)
-                        .rotate(finalRotation)
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.vinyl_bg),
-                        contentDescription = "Vinyl Art",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .align(Alignment.Center),
+                            .size(105.dp)
+                            .align(Alignment.Center)
+                            .clip(CircleShape),
                         contentScale = ContentScale.Crop
                     )
-
-                    if (!it.albumArt.isNullOrEmpty()) {
-                        AsyncImage(
-                            model = it.albumArt,
-                            contentDescription = "${it.artistId} Thumbnail",
-                            modifier = Modifier
-                                .size(105.dp)
-                                .align(Alignment.Center)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    } else {
-                        Image(
-                            painter = painterResource(id = R.drawable.album_art_default),
-                            contentDescription = "Album Art Default",
-                            modifier = Modifier
-                                .size(105.dp)
-                                .align(Alignment.Center)
-                                .clip(CircleShape),
-                            contentScale = ContentScale.Crop
-                        )
-                    }
                 }
             }
-        } ?: run {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .background(Color.Transparent)
-            )
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp)
-                .padding(horizontal = 8.dp)
-        ) {
-            Text(
-                text = song?.title ?: "Loading...",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(if (isPlaying) Modifier.basicMarquee() else Modifier)
-            )
-            Spacer(modifier = Modifier.height(3.dp))
-            Text(
-                text = song?.artist ?: "Loading...",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Thin,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 5.dp)
+            .padding(horizontal = 12.dp)
+    ) {
+        Text(
+            text = song?.title ?: "Loading...",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (isPlaying) Modifier.basicMarquee() else Modifier)
+        )
+        Spacer(modifier = Modifier.height(3.dp))
+        Text(
+            text = song?.artist ?: "Loading...",
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Thin,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+
 }
 
 @Composable
 private fun MusicController(
+    isEnable: Boolean,
     isPlay: Boolean = false,
     shuffleOnClick: (status: Boolean) -> Unit,
     shuffleStatus: Boolean,
@@ -382,13 +377,13 @@ private fun MusicController(
             },
             icon = Icons.Default.Shuffle,
             modifier = Modifier
-                .fillMaxHeight()
                 .width(30.dp),
             contentDescription = "Shuffle",
             tint = when (shuffleStatus) {
                 true -> Color.White
                 false -> Color.DarkGray
-            }
+            },
+            isEnable = isEnable
         )
         Row(
             modifier = Modifier.padding(horizontal = 35.dp),
@@ -400,7 +395,8 @@ private fun MusicController(
                 modifier = Modifier
                     .size(40.dp),
                 contentDescription = "SkipPrevious",
-                tint = Color.White
+                tint = if (isEnable) Color.White else Color.DarkGray,
+                isEnable = isEnable
             )
             Spacer(modifier = Modifier.width(15.dp))
             MusicControllerButton(
@@ -408,7 +404,8 @@ private fun MusicController(
                 icon = if (isPlay) Icons.Outlined.PauseCircle else Icons.Outlined.PlayCircle,
                 modifier = Modifier.size(80.dp),
                 contentDescription = "ControllerCircle",
-                tint = Color.White
+                tint = if (isEnable) Color.White else Color.DarkGray,
+                isEnable = isEnable
             )
             Spacer(modifier = Modifier.width(15.dp))
             MusicControllerButton(
@@ -417,7 +414,8 @@ private fun MusicController(
                 modifier = Modifier
                     .size(40.dp),
                 contentDescription = "SkipNext",
-                tint = Color.White
+                tint = if (isEnable) Color.White else Color.DarkGray,
+                isEnable = isEnable
             )
         }
         MusicControllerButton(
@@ -432,10 +430,10 @@ private fun MusicController(
                 false -> Icons.Default.Repeat
             },
             modifier = Modifier
-                .fillMaxHeight()
                 .width(30.dp),
             contentDescription = "Repeat",
-            tint = Color.White
+            tint = if (isEnable) Color.White else Color.DarkGray,
+            isEnable = isEnable
         )
     }
 }
@@ -443,6 +441,7 @@ private fun MusicController(
 @Composable
 private fun MusicControllerButton(
     onClick: () -> Unit,
+    isEnable: Boolean,
     modifier: Modifier = Modifier,
     icon: ImageVector,
     tint: Color,
@@ -450,6 +449,7 @@ private fun MusicControllerButton(
 ) {
     IconButton(
         onClick = onClick,
+        enabled = isEnable,
         modifier = modifier.background(Color.Transparent)
     ) {
         Icon(

@@ -1,7 +1,7 @@
 package com.blessingsoftware.blessingplay.core.data.remote.api
 
-import com.blessingsoftware.blessingplay.core.data.remote.dto.DataResponse
-import com.blessingsoftware.blessingplay.core.data.remote.dto.UrlRequest
+import com.blessingsoftware.blessingplay.core.data.remote.model.DataResponse
+import com.blessingsoftware.blessingplay.core.data.remote.model.UrlRequest
 import okhttp3.ResponseBody
 import retrofit2.http.Body
 import retrofit2.http.GET

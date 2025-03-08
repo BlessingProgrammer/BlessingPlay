@@ -3,16 +3,20 @@ package com.blessingsoftware.blessingplay.core.di
 import android.app.Application
 import android.content.Context
 import androidx.room.Room
+import com.blessingsoftware.blessingplay.BuildConfig
 import com.blessingsoftware.blessingplay.R
 import com.blessingsoftware.blessingplay.core.data.local.AppDb
 import com.blessingsoftware.blessingplay.core.data.remote.api.MoreSongApi
+import com.blessingsoftware.blessingplay.core.data.repository.MoreSongRepositoryImpl
 import com.blessingsoftware.blessingplay.core.data.repository.MusicPlayerRepositoryImpl
 import com.blessingsoftware.blessingplay.core.data.repository.PlaylistRepositoryImpl
 import com.blessingsoftware.blessingplay.core.data.repository.PlaylistSongCrossRefRepositoryImpl
 import com.blessingsoftware.blessingplay.core.data.repository.SongRepositoryImpl
+import com.blessingsoftware.blessingplay.core.domain.repository.MoreSongRepository
 import com.blessingsoftware.blessingplay.core.domain.repository.PlaylistRepository
 import com.blessingsoftware.blessingplay.core.domain.repository.PlaylistSongCrossRefRepository
 import com.blessingsoftware.blessingplay.core.domain.repository.SongRepository
+import com.blessingsoftware.blessingplay.home.screens.more_song.domain.use_case.PostHandleUrl
 import com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case.DeleteSong
 import com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case.GetAllSongs
 import com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case.InsertSongs
@@ -32,8 +36,11 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
 
 @Module
@@ -42,7 +49,7 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideSongDb(application: Application): AppDb {
+    fun provideAppDb(application: Application): AppDb {
         return Room.databaseBuilder(
             application,
             AppDb::class.java,
@@ -197,11 +204,41 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideMoreSongApi() : MoreSongApi{
+    fun provideMoreSongApi(): MoreSongApi {
+
+        val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(120, TimeUnit.SECONDS)
+            .readTimeout(120, TimeUnit.SECONDS)
+            .writeTimeout(120, TimeUnit.SECONDS)
+            .addInterceptor(HttpLoggingInterceptor().apply {
+                level =
+                    if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
+            })
+            .build()
+
         return Retrofit.Builder()
             .addConverterFactory(GsonConverterFactory.create())
-            .baseUrl(BuildConfig.API_BASE_URL)
+            .client(
+                okHttpClient
+            )
+            .baseUrl("http://192.168.0.180:8000")
             .build()
             .create(MoreSongApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideMoreSongRepository(
+        moreSongApi: MoreSongApi
+    ): MoreSongRepository {
+        return MoreSongRepositoryImpl(moreSongApi)
+    }
+
+    @Provides
+    @Singleton
+    fun providePostHandleUrl(
+        moreSongRepository: MoreSongRepository
+    ): PostHandleUrl {
+        return PostHandleUrl(moreSongRepository)
     }
 }

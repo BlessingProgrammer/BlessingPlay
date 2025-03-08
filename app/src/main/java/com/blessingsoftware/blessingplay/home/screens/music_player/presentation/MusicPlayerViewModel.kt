@@ -109,7 +109,9 @@ class MusicPlayerViewModel @Inject constructor(
     }
 
     fun playPauseMusic() {
-        musicPlayerRepository.playPauseMusic()
+        _musicPlayerState.value.songSelected?.let {
+            musicPlayerRepository.playPauseMusic()
+        }
     }
 
     fun nextSong() {

@@ -783,7 +783,7 @@ private fun SongExtraButton(
                     color = Color.LightGray,
                     start = Offset(0f, size.height),
                     end = Offset(size.width, size.height),
-                    strokeWidth = 2f
+                    strokeWidth = 1f
                 )
             }
             .clickable { onClick() }

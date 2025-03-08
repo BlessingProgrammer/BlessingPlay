@@ -4,9 +4,7 @@ import android.app.Application
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.blessingsoftware.blessingplay.core.presentation.utils.PlaybackSettings
 import com.blessingsoftware.blessingplay.core.presentation.utils.PreferencesManager
-import com.blessingsoftware.blessingplay.core.presentation.utils.isDatabaseExist
 import com.blessingsoftware.blessingplay.splash.domain.use_case.LoadMediaFileAndSaveToDb
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -33,10 +31,11 @@ class SplashViewModel @Inject constructor(
 
     private fun loadMedias() {
         viewModelScope.launch {
-            if (isDatabaseExist(application)) {
+            val loaded = loadMediaFileAndSaveToDb.invoke()
+
+            if(loaded){
                 delay(2000)
-            } else {
-                loadMediaFileAndSaveToDb()
+            }else{
                 preferencesManager.savePlaybackSettings(
                     playlistType = false,
                     playlistId = null,

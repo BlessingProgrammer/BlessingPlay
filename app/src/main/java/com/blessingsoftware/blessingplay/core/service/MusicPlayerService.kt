@@ -106,11 +106,21 @@ class MusicPlayerService : Service() {
                     if (song != null) {
                         currentSong.update { song }
                         maxDuration.update { song.duration.toFloat() }
-                        isPlaying.update { true }
+                        isPlaying.update { exoPlayer.isPlaying }
+                        createNotification(song)
+                        saveCurrentPlaybackStatus()
                     }
                 }
             }
         })
+
+//        exoPlayer.addListener(object : Player.Listener {
+//            override fun onIsPlayingChanged(isPlayingNow: Boolean) {
+//                Log.d("ExoPlaying", "onIsPlayingChanged: $isPlayingNow")
+//                isPlaying.update { isPlayingNow }
+//            }
+//        })
+
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -147,7 +157,7 @@ class MusicPlayerService : Service() {
                 songList.update { songs }
             }
             if (settings.lastSongId == null) {
-                currentSong.update { songList.value.first() }
+                currentSong.update { songList.value.firstOrNull() }
             } else {
                 val song = appDb.songDao.getSongEntityBySongId(settings.lastSongId)
                 currentSong.update { song.toSong() }
@@ -159,7 +169,7 @@ class MusicPlayerService : Service() {
             withContext(Dispatchers.Main) {
                 when (settings.currentRepeatMode) {
                     true -> exoPlayer.repeatMode = Player.REPEAT_MODE_ONE
-                    false -> exoPlayer.repeatMode = Player.REPEAT_MODE_OFF
+                    false -> exoPlayer.repeatMode = Player.REPEAT_MODE_ALL
                 }
                 exoPlayer.shuffleModeEnabled = settings.currentShuffleStatus
                 start()
@@ -192,6 +202,7 @@ class MusicPlayerService : Service() {
     }
 
     fun prev() {
+        if (exoPlayer.mediaItemCount == 0 || songList.value.isEmpty()) return
         job?.cancel()
 
         if (exoPlayer.hasPreviousMediaItem()) {
@@ -205,23 +216,28 @@ class MusicPlayerService : Service() {
             }
         }
 
-        currentSong.value?.let { createNotification(it) }
+        isPlaying.update { true }
         updateDurations()
         saveCurrentPlaybackStatus()
+        currentSong.value?.let { createNotification(it) }
     }
 
     fun playPause() {
+        if (exoPlayer.mediaItemCount == 0 || songList.value.isEmpty()) return
         if (exoPlayer.isPlaying) {
             exoPlayer.pause()
+            isPlaying.update { false }
         } else {
             exoPlayer.play()
+            isPlaying.update { true }
         }
-        isPlaying.update { exoPlayer.isPlaying }
-        currentSong.value?.let { createNotification(it) }
+
         saveCurrentPlaybackStatus()
+        currentSong.value?.let { createNotification(it) }
     }
 
     fun next() {
+        if (exoPlayer.mediaItemCount == 0 || songList.value.isEmpty()) return
         job?.cancel()
 
         if (exoPlayer.hasNextMediaItem()) {
@@ -232,9 +248,10 @@ class MusicPlayerService : Service() {
             exoPlayer.play()
         }
 
-        currentSong.value?.let { createNotification(it) }
+        isPlaying.update { true }
         updateDurations()
         saveCurrentPlaybackStatus()
+        currentSong.value?.let { createNotification(it) }
     }
 
     private fun updateDurations() {
@@ -287,11 +304,11 @@ class MusicPlayerService : Service() {
         exoPlayer.setMediaItems(mediaItems, startIndex, 0L)
         exoPlayer.prepare()
 
-        currentSong.value?.let { createNotification(it) }
-        updateDurations()
-
         isPlaying.update { true }
         exoPlayer.play()
+
+        currentSong.value?.let { createNotification(it) }
+        updateDurations()
     }
 
     private fun start() {
@@ -320,24 +337,22 @@ class MusicPlayerService : Service() {
             return
         }
 
-
         val startIndex = songList.value.indexOfFirst { it.id == currentSong.value?.id }
             .takeIf { it >= 0 } ?: 0
 
         exoPlayer.setMediaItems(mediaItems, startIndex, 0L)
         exoPlayer.prepare()
 
-        currentSong.value?.let { createNotification(it) }
-        updateDurations()
-
         isPlaying.update { false }
         exoPlayer.pause()
+        currentSong.value?.let { createNotification(it) }
+        updateDurations()
     }
 
     fun setRepeatModeOption(option: Boolean) {
         when (option) {
             true -> exoPlayer.repeatMode = Player.REPEAT_MODE_ONE
-            false -> exoPlayer.repeatMode = Player.REPEAT_MODE_OFF
+            false -> exoPlayer.repeatMode = Player.REPEAT_MODE_ALL
         }
         currentRepeatOption.update { option }
     }
@@ -365,8 +380,6 @@ class MusicPlayerService : Service() {
 
         val notification = NotificationCompat.Builder(this, CHANNEL_ID)
             .setStyle(style)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentTitle(song.title)
             .setContentText(song.artist)
             .addAction(R.drawable.ic_skip_previous, "prev", createPendingIntent(PREV))

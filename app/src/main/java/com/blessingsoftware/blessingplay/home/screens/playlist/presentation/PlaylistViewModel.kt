@@ -143,7 +143,7 @@ class PlaylistViewModel @Inject constructor(
     private suspend fun pullToRefresh() {
         onAction(PlaylistActions.UpdatePullLoading(true))
         onAction(PlaylistActions.LoadPlaylists)
-        delay(300)
+        delay(500)
         onAction(PlaylistActions.UpdatePullLoading(false))
     }
 

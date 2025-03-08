@@ -3,7 +3,7 @@ package com.blessingsoftware.blessingplay.core.domain.repository
 import com.blessingsoftware.blessingplay.core.domain.model.Song
 
 interface SongRepository {
-    suspend fun loadMediaFileAndSaveToDb()
+    suspend fun loadMediaFileAndSaveToDb() : Boolean
 
     suspend fun getAllSongs(): List<Song>
 

@@ -6,7 +6,7 @@ import javax.inject.Inject
 class LoadMediaFileAndSaveToDb @Inject constructor(
     private val songRepository: SongRepository
 ) {
-    suspend operator fun invoke() {
-        songRepository.loadMediaFileAndSaveToDb()
+    suspend operator fun invoke(): Boolean {
+        return songRepository.loadMediaFileAndSaveToDb()
     }
 }
