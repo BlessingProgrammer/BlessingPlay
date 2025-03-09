@@ -139,7 +139,7 @@ fun BottomNavigationBar(
             bottomNavItems.forEach { item ->
                 if (item.screen == BottomNavScreen.MusicPlayer) {
                     Image(
-                        painter = painterResource(id = R.drawable.vinyl),
+                        painter = painterResource(id = R.drawable.vinyl_bg),
                         contentDescription = "Music player button",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier

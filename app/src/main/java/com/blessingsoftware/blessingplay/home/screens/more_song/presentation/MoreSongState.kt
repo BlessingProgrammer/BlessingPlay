@@ -7,7 +7,7 @@ data class MoreSongState(
     val isLoading: Boolean = false,
 
     val moreSong: MoreSong? = null,
-    val status: String? = null,
+    val code: Int? = null,
     val message: String? = null,
 
     val progress: Int = 0

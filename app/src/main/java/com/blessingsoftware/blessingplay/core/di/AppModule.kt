@@ -16,6 +16,7 @@ import com.blessingsoftware.blessingplay.core.domain.repository.MoreSongReposito
 import com.blessingsoftware.blessingplay.core.domain.repository.PlaylistRepository
 import com.blessingsoftware.blessingplay.core.domain.repository.PlaylistSongCrossRefRepository
 import com.blessingsoftware.blessingplay.core.domain.repository.SongRepository
+import com.blessingsoftware.blessingplay.home.screens.more_song.domain.use_case.DownloadSong
 import com.blessingsoftware.blessingplay.home.screens.more_song.domain.use_case.PostHandleUrl
 import com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case.DeleteSong
 import com.blessingsoftware.blessingplay.home.screens.song_list.domain.use_case.GetAllSongs
@@ -207,9 +208,9 @@ object AppModule {
     fun provideMoreSongApi(): MoreSongApi {
 
         val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(120, TimeUnit.SECONDS)
-            .readTimeout(120, TimeUnit.SECONDS)
-            .writeTimeout(120, TimeUnit.SECONDS)
+            .connectTimeout(60, TimeUnit.SECONDS)
+            .readTimeout(60, TimeUnit.SECONDS)
+            .writeTimeout(60, TimeUnit.SECONDS)
             .addInterceptor(HttpLoggingInterceptor().apply {
                 level =
                     if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
@@ -221,7 +222,7 @@ object AppModule {
             .client(
                 okHttpClient
             )
-            .baseUrl("http://192.168.0.180:8000")
+            .baseUrl("https://blessingsoftware.id.vn")
             .build()
             .create(MoreSongApi::class.java)
     }
@@ -240,5 +241,14 @@ object AppModule {
         moreSongRepository: MoreSongRepository
     ): PostHandleUrl {
         return PostHandleUrl(moreSongRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDownloadSong(
+        moreSongRepository: MoreSongRepository,
+        @ApplicationContext context: Context,
+    ): DownloadSong {
+        return DownloadSong(moreSongRepository, context)
     }
 }

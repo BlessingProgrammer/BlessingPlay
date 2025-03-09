@@ -24,7 +24,7 @@ android {
 
     buildTypes {
         getByName("debug") {
-            buildConfigField("String", "API_BASE_URL", "\"https://e7e9-116-96-46-49.ngrok-free.app\"")
+            buildConfigField("String", "API_BASE_URL", "\"http://192.168.0.180:8000\"")
         }
         getByName("release") {
             buildConfigField("String", "API_BASE_URL", "\"https://blessingsoftware.id.vn\"")

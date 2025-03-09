@@ -23,8 +23,9 @@ class App : Application() {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 enableVibration(false)
-                vibrationPattern = longArrayOf(0L)
+                vibrationPattern = null
                 lockscreenVisibility = NotificationCompat.VISIBILITY_PUBLIC
+                setSound(null, null)
             }
             val notificationManager =
                 getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager

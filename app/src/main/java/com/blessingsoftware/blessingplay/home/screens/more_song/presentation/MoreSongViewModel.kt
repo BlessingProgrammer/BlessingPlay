@@ -3,6 +3,7 @@ package com.blessingsoftware.blessingplay.home.screens.more_song.presentation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.blessingsoftware.blessingplay.core.data.mapper.toMoreSong
+import com.blessingsoftware.blessingplay.home.screens.more_song.domain.use_case.DownloadSong
 
 import com.blessingsoftware.blessingplay.home.screens.more_song.domain.use_case.PostHandleUrl
 import com.blessingsoftware.blessingplay.home.screens.more_song.presentation.utils.Resource
@@ -15,7 +16,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MoreSongViewModel @Inject constructor(
-    private val postHandleUrl: PostHandleUrl
+    private val postHandleUrl: PostHandleUrl,
+    private val downloadSong: DownloadSong
 ) : ViewModel() {
 
     private val _moreSongState = MutableStateFlow(MoreSongState())
@@ -32,8 +34,8 @@ class MoreSongViewModel @Inject constructor(
             is MoreSongActions.UpdateMoreSong ->
                 _moreSongState.update { it.copy(moreSong = action.moreSong) }
 
-            is MoreSongActions.UpdateStatus ->
-                _moreSongState.update { it.copy(status = action.status) }
+            is MoreSongActions.UpdateCode ->
+                _moreSongState.update { it.copy(code = action.code) }
 
             is MoreSongActions.UpdateMessage ->
                 _moreSongState.update { it.copy(message = action.message) }
@@ -45,22 +47,65 @@ class MoreSongViewModel @Inject constructor(
 
     fun postUrl() {
         viewModelScope.launch {
+            onAction(MoreSongActions.UpdateIsLoading(true))
             postHandleUrl.invoke(_moreSongState.value.url).collect { resource ->
                 when (resource) {
                     is Resource.Loading -> {
                         onAction(MoreSongActions.UpdateProgress(progress = resource.progress ?: 0))
-                        onAction(MoreSongActions.UpdateIsLoading(true))
                     }
+
                     is Resource.Success -> {
                         val moreSong = resource.data.data?.toMoreSong()
                         onAction(MoreSongActions.UpdateMoreSong(moreSong = moreSong))
-                        onAction(MoreSongActions.UpdateIsLoading(false))
+                        onAction(MoreSongActions.UpdateMessage(message = resource.data.message))
+                        onAction(MoreSongActions.UpdateCode(code = resource.data.code))
                     }
+
                     is Resource.Error -> {
-                        onAction(MoreSongActions.UpdateMessage(message = resource.message ?: "Unknown error"))
-                        onAction(MoreSongActions.UpdateIsLoading(false))
+                        onAction(
+                            MoreSongActions.UpdateMessage(
+                                message = resource.message ?: "Unknown error"
+                            )
+                        )
                     }
                 }
+            }
+            onAction(MoreSongActions.UpdateIsLoading(false))
+        }
+    }
+
+    fun downloadSongFile() {
+        viewModelScope.launch {
+            _moreSongState.value.moreSong?.let {
+                onAction(MoreSongActions.UpdateIsLoading(true))
+                downloadSong(it.songPath).collect { resource ->
+                    when (resource) {
+                        is Resource.Loading -> {
+                            onAction(
+                                MoreSongActions.UpdateProgress(
+                                    progress = resource.progress ?: 0
+                                )
+                            )
+                        }
+
+                        is Resource.Success -> {
+                            val code = resource.data
+                            if (code == 200) {
+                                onAction(MoreSongActions.UpdateMessage(message = "Download successful"))
+                                onAction(MoreSongActions.UpdateMoreSong(null))
+                            }
+                        }
+
+                        is Resource.Error -> {
+                            onAction(
+                                MoreSongActions.UpdateMessage(
+                                    message = resource.message ?: "Unknown error"
+                                )
+                            )
+                        }
+                    }
+                }
+                onAction(MoreSongActions.UpdateIsLoading(false))
             }
         }
     }

@@ -146,7 +146,8 @@ private fun PermissionHandler(onPermissionResult: @Composable (Boolean) -> Unit)
         arrayOf(
             Manifest.permission.READ_MEDIA_IMAGES,
             Manifest.permission.READ_MEDIA_VIDEO,
-            Manifest.permission.READ_MEDIA_AUDIO
+            Manifest.permission.READ_MEDIA_AUDIO,
+            Manifest.permission.POST_NOTIFICATIONS
         )
     } else {
         arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -159,7 +160,7 @@ private fun PermissionHandler(onPermissionResult: @Composable (Boolean) -> Unit)
         if (!isPermissionGranted) {
             Toast.makeText(
                 context,
-                "Ứng dụng cần quyền để truy cập bộ nhớ!",
+                "Cần cung cấp đủ quyền để tiếp tục!",
                 Toast.LENGTH_SHORT
             ).show()
         }

@@ -1,5 +1,6 @@
 package com.blessingsoftware.blessingplay.home.screens.more_song.domain.use_case
 
+import android.util.Log
 import com.blessingsoftware.blessingplay.core.data.remote.model.DataResponse
 import com.blessingsoftware.blessingplay.core.data.remote.model.UrlRequest
 import com.blessingsoftware.blessingplay.core.domain.repository.MoreSongRepository
@@ -17,35 +18,46 @@ class PostHandleUrl(
     operator fun invoke(
         url: String?
     ): Flow<Resource<DataResponse>> = flow {
-        coroutineScope {
-            if (url.isNullOrBlank()) {
-                emit(Resource.Error("Url is empty"))
-                return@coroutineScope
-            }
+        try {
+            coroutineScope {
+                if (url.isNullOrBlank()) {
+                    emit(Resource.Error("Url is empty"))
+                    return@coroutineScope
+                }
 
-            val expectedTime = 10_000L
-            val startTime = System.currentTimeMillis()
+                val expectedTime = 60000L
+                val startTime = System.currentTimeMillis()
 
-            val serverResult =  async  (Dispatchers.IO) {
-                moreSongRepository.postHandleUrl(request = UrlRequest(url))
-            }
+                val serverResult = async(Dispatchers.IO) {
+                    moreSongRepository.postHandleUrl(request = UrlRequest(url))
+                }
 
-            while (serverResult.isActive) {
-                val elapsed = System.currentTimeMillis() - startTime
-                val progress = ((elapsed.toFloat() / expectedTime) * 95).coerceAtMost(95f).toInt()
-                emit(Resource.Loading(progress))
-                delay(100L)
-            }
+                while (System.currentTimeMillis() - startTime < expectedTime) {
+                    val elapsed = System.currentTimeMillis() - startTime
+                    val progress = ((elapsed.toFloat() / expectedTime) * 95).coerceAtMost(95f).toInt()
+                    emit(Resource.Loading(progress))
+                    delay(100L)
 
-            try {
+                    if (elapsed >= 3000L && serverResult.isCompleted) {
+                        break
+                    }
+                }
+
                 val dataResponse = serverResult.await()
-                emit(Resource.Success(dataResponse))
+                delay(1500L)
                 emit(Resource.Loading(100))
-            } catch (e: Exception) {
-                e.printStackTrace()
-                emit(Resource.Error(e.localizedMessage))
+                delay(300L)
+                emit(Resource.Success(dataResponse))
                 emit(Resource.Loading(0))
             }
+        } catch (e: java.net.SocketTimeoutException) {
+            e.printStackTrace()
+            emit(Resource.Error("Server error, please try again later"))
+            emit(Resource.Loading(0))
+        } catch (e: Exception) {
+            e.printStackTrace()
+            emit(Resource.Error("Cannot connect to internet"))
+            emit(Resource.Loading(0))
         }
     }
 }

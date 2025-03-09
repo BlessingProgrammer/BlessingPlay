@@ -8,8 +8,8 @@ sealed interface MoreSongActions {
 
     data class UpdateMoreSong(val moreSong: MoreSong?) : MoreSongActions
 
-    data class UpdateStatus(val status: String) : MoreSongActions
-    data class UpdateMessage(val message: String) : MoreSongActions
+    data class UpdateCode(val code: Int?) : MoreSongActions
+    data class UpdateMessage(val message: String?) : MoreSongActions
 
     data class UpdateProgress(val progress: Int) : MoreSongActions
 }

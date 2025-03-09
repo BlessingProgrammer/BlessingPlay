@@ -243,7 +243,15 @@ private fun MusicProfile(song: Song?, isPlaying: Boolean) {
             repeatMode = RepeatMode.Restart
         )
     )
-    val finalRotation = if (isPlaying) rotationAngle else 0f
+    var lastRotation by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(isPlaying, rotationAngle) {
+        if (isPlaying) {
+            lastRotation = rotationAngle
+        }
+    }
+
+    val finalRotation = if (isPlaying) rotationAngle else lastRotation
 
     Column(
         modifier = Modifier
