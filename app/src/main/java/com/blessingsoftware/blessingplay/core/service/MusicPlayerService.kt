@@ -9,9 +9,12 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Binder
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.support.v4.media.session.MediaSessionCompat
 import android.util.Log
+import android.view.KeyEvent
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
@@ -43,6 +46,7 @@ const val PREV = "prev"
 const val NEXT = "next"
 const val PLAY_PAUSE = "play_pause"
 
+@Suppress("DEPRECATION")
 @AndroidEntryPoint
 class MusicPlayerService : Service() {
 
@@ -74,6 +78,12 @@ class MusicPlayerService : Service() {
 
     private val binder = MusicBinder()
 
+    private lateinit var mediaSession: MediaSessionCompat
+
+    private var mediaButtonClickCount = 0
+    private var lastClickTime = 0L
+    private val clickTimeout = 500L
+
     inner class MusicBinder : Binder() {
         fun getService() = this@MusicPlayerService
 
@@ -98,6 +108,37 @@ class MusicPlayerService : Service() {
         exoPlayer = ExoPlayer.Builder(applicationContext).build()
         preferencesManager = PreferencesManager(applicationContext)
 
+        mediaSession = MediaSessionCompat(this, "music").apply {
+            isActive = true
+            setMediaButtonReceiver(null)
+            setCallback(object : MediaSessionCompat.Callback() {
+                override fun onMediaButtonEvent(mediaButtonIntent: Intent?): Boolean {
+                    val keyEvent = mediaButtonIntent?.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT)
+                    if (keyEvent?.action == KeyEvent.ACTION_DOWN) {
+                        // Xử lý nút nhấn như bạn đã làm
+                        val currentTime = System.currentTimeMillis()
+                        if (currentTime - lastClickTime < clickTimeout) {
+                            mediaButtonClickCount++
+                        } else {
+                            mediaButtonClickCount = 1
+                        }
+                        lastClickTime = currentTime
+
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            when (mediaButtonClickCount) {
+                                1 -> playPause()
+                                2 -> next()
+                                3 -> prev()
+                            }
+                            mediaButtonClickCount = 0
+                        }, clickTimeout)
+                        return true
+                    }
+                    return super.onMediaButtonEvent(mediaButtonIntent)
+                }
+            })
+        }
+
         loadPlaylistSettings()
 
         exoPlayer.addListener(object : Player.Listener {
@@ -119,17 +160,9 @@ class MusicPlayerService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         intent?.let {
             when (intent.action) {
-                PREV -> {
-                    prev()
-                }
-
-                PLAY_PAUSE -> {
-                    playPause()
-                }
-
-                NEXT -> {
-                    next()
-                }
+                PREV -> prev()
+                PLAY_PAUSE -> playPause()
+                NEXT -> next()
             }
         }
         return START_STICKY
