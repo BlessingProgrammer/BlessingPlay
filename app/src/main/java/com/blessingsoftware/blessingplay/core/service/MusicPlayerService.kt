@@ -98,9 +98,6 @@ class MusicPlayerService : Service() {
         exoPlayer = ExoPlayer.Builder(applicationContext).build()
         preferencesManager = PreferencesManager(applicationContext)
 
-        val initialNotification = createInitialNotification().build()
-        startForeground(1, initialNotification)
-
         loadPlaylistSettings()
 
         exoPlayer.addListener(object : Player.Listener {
@@ -401,16 +398,6 @@ class MusicPlayerService : Service() {
         } else {
             startForeground(1, notification)
         }
-    }
-
-    private fun createInitialNotification(): NotificationCompat.Builder {
-        return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("Music Player Running")
-            .setContentText("Service is running")
-            .setSmallIcon(R.drawable.ic_mucsic_note)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setVibrate(null)
     }
 
     private fun createPendingIntent(type: String): PendingIntent {
